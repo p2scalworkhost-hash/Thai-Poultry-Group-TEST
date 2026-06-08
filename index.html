@@ -105,11 +105,11 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .doc.pdf-page .doc-content{flex:1}
 .doc.pdf-page .doc-table tr{page-break-inside:avoid;break-inside:avoid}
 .doc.pdf-page .doc-footer-img{margin-top:auto}
-/* FIX: dash table — flatten rowspan so columns stay aligned */
+/* FIX: dash table โ€” flatten rowspan so columns stay aligned */
 #dash-body tr td {vertical-align:middle;}
 #dash-body tr.group-sep td {border-top:2px solid #c5d8ec;}
 #dash-body tr.subtotal-row td {background:#f0f4f8;font-weight:700;border-top:2px solid #c5d8ec;border-bottom:3px solid #c5d8ec;}
-/* ═══ LOGIN & LOADING ═══ */
+/* โ•โ•โ• LOGIN & LOADING โ•โ•โ• */
 .login-overlay{display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);z-index:9999;align-items:center;justify-content:center}
 .login-box{background:#fff;border-radius:12px;padding:36px 40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}
 .login-box h2{color:#1a3a5c;margin-bottom:4px;font-size:20px}
@@ -145,9 +145,11 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Chart.js for Freight Trend -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Excel-derived seed master data -->
+<script src="seed-master-data.js"></script>
 </head>
 <body>
-<!-- ═══ LOGIN OVERLAY ═══ -->
+<!-- โ•โ•โ• LOGIN OVERLAY โ•โ•โ• -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
     <h2>Thai Poultry Group</h2>
@@ -158,7 +160,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="login-footer">TPG Sales Contract System v2.0</div>
   </div>
 </div>
-<!-- ═══ LOADING OVERLAY ═══ -->
+<!-- โ•โ•โ• LOADING OVERLAY โ•โ•โ• -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-text">Loading data...</div>
@@ -194,6 +196,8 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
   <div class="nav-item" onclick="showPage('products',this)">Product Master</div>
   <div class="nav-item" onclick="showPage('ports',this)">Ports</div>
   <div class="nav-item" onclick="showPage('payments',this)">Payment Terms</div>
+  <div class="nav-sec">Database</div>
+  <div class="nav-item" onclick="confirmSeedMockData()" style="color:#ffb74d">Seed Master Data</div>
   
   <!-- Logged in User Status (bottom-left) -->
   <div class="sidebar-user" style="margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 11px;">
@@ -322,6 +326,22 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     </div>
     <div id="dash-empty" style="text-align:center;padding:28px;color:#aaa;display:none">No contracts yet.</div>
   </div>
+  <!-- Product Price Trend Section -->
+  <div class="card" id="price-trend-card">
+    <div class="card-title">Product Price Trend
+      <div style="display:flex;gap:7px;align-items:center">
+        <select id="pt-fil-product" onchange="renderPriceTrend()" style="border:1px solid #d0d0d0;border-radius:4px;padding:3px 7px;font-size:11px"><option value="">All Products</option></select>
+        <select id="pt-fil-buyer" onchange="renderPriceTrend()" style="border:1px solid #d0d0d0;border-radius:4px;padding:3px 7px;font-size:11px"><option value="">All Buyers</option></select>
+        <select id="pt-fil-year" onchange="renderPriceTrend()" style="border:1px solid #d0d0d0;border-radius:4px;padding:3px 7px;font-size:11px"><option value="">All Years</option></select>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;color:#666">
+          <input type="checkbox" id="pt-show-ma" onchange="renderPriceTrend()" style="width:12px;height:12px"> 3-Mo MA
+        </label>
+      </div>
+    </div>
+    <canvas id="price-trend-chart" height="90" style="margin-bottom:14px"></canvas>
+    <div style="overflow-x:auto"><table class="dt" id="pt-table"><thead><tr><th>Month</th><th>Product</th><th>Buyer</th><th>Contracts</th><th>Avg Qty (MT)</th><th>Min Price</th><th>Max Price</th><th>Avg Price</th><th>Change</th></tr></thead><tbody id="pt-tbody"></tbody></table></div>
+    <div id="pt-empty" style="text-align:center;padding:20px;color:#aaa;display:none">No price data available.</div>
+  </div>
 </div>
 
 <!-- Approval Queue Page -->
@@ -407,10 +427,10 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 <div id="page-buyers" class="page">
   <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Buyer Master</div>
   <div style="margin-bottom:10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px">
-    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">📋 Import จาก Google Sheet — Paste ข้อมูลจาก CUSTOMER_DETAILS sheet</div>
-    <textarea id="buyer-paste-area" rows="4" placeholder="Copy ทั้ง sheet แล้ว paste ที่นี่..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
+    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">๐“ Import เธเธฒเธ Google Sheet โ€” Paste เธเนเธญเธกเธนเธฅเธเธฒเธ CUSTOMER_DETAILS sheet</div>
+    <textarea id="buyer-paste-area" rows="4" placeholder="Copy เธ—เธฑเนเธ sheet เนเธฅเนเธง paste เธ—เธตเนเธเธตเน..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
     <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-      <button class="btn btn-success btn-sm" onclick="importPasteData('buyers')">⬇ Import Buyers</button>
+      <button class="btn btn-success btn-sm" onclick="importPasteData('buyers')">โฌ Import Buyers</button>
       <span id="sync-buyer-status" style="font-size:11px;color:#2e7d32"></span>
     </div>
   </div>
@@ -436,10 +456,10 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 <div id="page-products" class="page">
   <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Product Master</div>
   <div style="margin-bottom:10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px">
-    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">📋 Import จาก Google Sheet — Paste ข้อมูลจาก PRODUCT_DB sheet</div>
-    <textarea id="prod-paste-area" rows="4" placeholder="Copy ทั้ง sheet แล้ว paste ที่นี่..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
+    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">๐“ Import เธเธฒเธ Google Sheet โ€” Paste เธเนเธญเธกเธนเธฅเธเธฒเธ PRODUCT_DB sheet</div>
+    <textarea id="prod-paste-area" rows="4" placeholder="Copy เธ—เธฑเนเธ sheet เนเธฅเนเธง paste เธ—เธตเนเธเธตเน..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
     <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-      <button class="btn btn-success btn-sm" onclick="importPasteData('products')">⬇ Import Products</button>
+      <button class="btn btn-success btn-sm" onclick="importPasteData('products')">โฌ Import Products</button>
       <span id="sync-prod-status" style="font-size:11px;color:#2e7d32"></span>
     </div>
   </div>
@@ -638,9 +658,9 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div id="print-area" style="display:none"></div>
 <script type="text/javascript">
-// ═══════════════════════════════════════════════════════════════
-// FIREBASE CONFIG — ใส่ค่าจริงที่นี่เมื่อพร้อม
-// ═══════════════════════════════════════════════════════════════
+// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// FIREBASE CONFIG โ€” เนเธชเนเธเนเธฒเธเธฃเธดเธเธ—เธตเนเธเธตเนเน€เธกเธทเนเธญเธเธฃเนเธญเธก
+// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 var firebaseConfig = {
   apiKey: "AIzaSyAf4cljZCY0qU8PndVBviYdrsmgHpAG6Fs",
   authDomain: "factory-cedf6.firebaseapp.com",
@@ -684,7 +704,7 @@ try {
     db = firebase.firestore();
     auth = firebase.auth();
     useFirebase = true;
-    console.log('✅ Firebase initialized');
+    console.log('โ… Firebase initialized');
     
     // Auto login check
     auth.onAuthStateChanged(async function(user) {
@@ -715,13 +735,13 @@ try {
       }
     });
   } else {
-    console.log('ℹ️ Firebase not configured — using localStorage fallback');
+    console.log('โน๏ธ Firebase not configured โ€” using localStorage fallback');
   }
 } catch(e) {
-  console.warn('⚠️ Firebase init failed, using localStorage:', e);
+  console.warn('โ ๏ธ Firebase init failed, using localStorage:', e);
 }
 
-// ═══ FIREBASE HELPER FUNCTIONS ═══
+// โ•โ•โ• FIREBASE HELPER FUNCTIONS โ•โ•โ•
 function fbSet(col, id, data) {
   if(!useFirebase || !db) return;
   try {
@@ -756,14 +776,14 @@ function fbBatchDel(col, ids) {
   } catch(e) { console.warn('fbBatchDel error:', e); }
 }
 
-// ═══ COLLECTION MAPPING ═══
+// โ•โ•โ• COLLECTION MAPPING โ•โ•โ•
 var FB_COL = {
   buyers:'buyers', products:'products', contracts:'contracts',
   ports:'ports', payTerms:'payTerms', saleOrders:'saleOrders',
   shipEntries:'shipEntries', categories:'categories'
 };
 
-// ═══ DATA ARRAYS (in-memory) ═══
+// โ•โ•โ• DATA ARRAYS (in-memory) โ•โ•โ•
 var buyers = [];
 var products = [];
 var contracts = [];
@@ -787,10 +807,10 @@ function moKey(s){if(!s)return'9999-99';var p=s.split(' ');var y=p[1]||'9999';va
 function sortMonths(arr){return arr.slice().sort(function(a,b){return moKey(a).localeCompare(moKey(b));});}
 function allShipMonths(){var s={};getLatestContracts().forEach(function(c){c.groups.forEach(function(g){if(g.shipmentMonth)s[g.shipmentMonth]=1;});});return sortMonths(Object.keys(s));}
 
-// ═══ SAVE TO LOCALSTORAGE (cache) + FIREBASE ═══
+// โ•โ•โ• SAVE TO LOCALSTORAGE (cache) + FIREBASE โ•โ•โ•
 function sd(){}
 
-// ═══ LOAD DATA FROM FIREBASE OR LOCALSTORAGE ═══
+// โ•โ•โ• LOAD DATA FROM FIREBASE OR LOCALSTORAGE โ•โ•โ•
 async function loadData() {
   if(useFirebase) {
     try {
@@ -820,10 +840,774 @@ async function loadData() {
   }
 }
 
-// ═══ SEED DEFAULT DATA ═══
+// โ• โ• โ•  SEED DEFAULT DATA โ• โ• โ• 
 function seedDefaults() {}
 
-// ═══ APP INITIALIZATION ═══
+function confirmSeedMockData() {
+  showAppModal({
+    title: 'Seed Master Data',
+    message: 'This will replace master data from the Excel workbook: Buyers, Products, Categories, Ports, and Payment Terms. Contracts, Sale Orders, and Shipment Tracking will not be deleted. Proceed?',
+    confirmText: 'Seed Master',
+    cancelText: 'Cancel'
+  }).then(async function(ok) {
+    if (ok) {
+      document.getElementById('loading-overlay').classList.add('show');
+      document.getElementById('loading-text').textContent = 'Seeding master data...';
+      try {
+        await seedAllMasterData();
+        document.getElementById('loading-overlay').classList.remove('show');
+        showAppModal({
+          title: 'Success',
+          message: 'Master data seeded from TPG_SCSO_Workflow_v2026.xlsx successfully.',
+          confirmText: 'OK',
+          hideCancel: true,
+          type: 'success'
+        }).then(function() {
+          showPage('dashboard');
+        });
+      } catch (err) {
+        document.getElementById('loading-overlay').classList.remove('show');
+        alert('Seeding failed: ' + err.message);
+      }
+    }
+  });
+}
+
+async function seedAllMasterData() {
+  var seed = window.EXCEL_SEED_MASTER_DATA;
+  if (!seed) {
+    throw new Error('seed-master-data.js is not loaded.');
+  }
+
+  async function fbBatchSetAsync(col, items) {
+    if(!useFirebase || !db || !items.length) return;
+    var promises = [];
+    for(var i = 0; i < items.length; i += 400) {
+      var batch = db.batch();
+      items.slice(i, i + 400).forEach(function(item) {
+        batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
+      });
+      promises.push(batch.commit());
+    }
+    await Promise.all(promises);
+  }
+
+  async function fbBatchDeleteCollection(col) {
+    if(!useFirebase || !db) return;
+    var snap = await db.collection(col).get();
+    var docs = snap.docs;
+    for(var i = 0; i < docs.length; i += 400) {
+      var batch = db.batch();
+      docs.slice(i, i + 400).forEach(function(doc) { batch.delete(doc.ref); });
+      await batch.commit();
+    }
+  }
+
+  if (useFirebase && db) {
+    var masterCollections = ['buyers', 'products', 'ports', 'payTerms', 'categories'];
+    for (var m = 0; m < masterCollections.length; m++) {
+      await fbBatchDeleteCollection(masterCollections[m]);
+    }
+    await Promise.all([
+      fbBatchSetAsync('categories', seed.categories || []),
+      fbBatchSetAsync('buyers', seed.buyers || []),
+      fbBatchSetAsync('products', seed.products || []),
+      fbBatchSetAsync('ports', seed.ports || []),
+      fbBatchSetAsync('payTerms', seed.payTerms || [])
+    ]);
+  }
+
+  window.categories = (seed.categories || []).slice();
+  window.buyers = (seed.buyers || []).slice();
+  window.products = (seed.products || []).slice();
+  window.ports = (seed.ports || []).slice();
+  window.payTerms = (seed.payTerms || []).slice();
+
+  popCreateDDs();
+  popBuyerSel('pm-buyer');
+  popCatSel();
+  popProdCatFilter();
+  renderBuyerList();
+  renderProdList();
+  renderCatList();
+  renderPortList();
+  renderPTList();
+}
+
+async function seedAllMockData() {
+  // Helper for batch sets that returns a promise
+  async function fbBatchSetAsync(col, items) {
+    if(!useFirebase || !db || !items.length) return;
+    var promises = [];
+    for(var i = 0; i < items.length; i += 400) {
+      var batch = db.batch();
+      items.slice(i, i + 400).forEach(function(item) {
+        batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
+      });
+      promises.push(batch.commit());
+    }
+    await Promise.all(promises);
+  }
+
+  // 1. Delete all existing records from Firestore
+  if (useFirebase && db) {
+    var collections = ['buyers', 'products', 'contracts', 'ports', 'payTerms', 'saleOrders', 'shipEntries', 'categories'];
+    for (var k = 0; k < collections.length; k++) {
+      var col = collections[k];
+      var list = window[col] || [];
+      var ids = list.map(function(x) { return x.id; }).filter(Boolean);
+      if (ids.length > 0) {
+        for (var i = 0; i < ids.length; i += 400) {
+          var batch = db.batch();
+          ids.slice(i, i + 400).forEach(function(id) {
+            batch.delete(db.collection(col).doc(id));
+          });
+          await batch.commit();
+        }
+      }
+    }
+  }
+
+  // 2. Define mock lists
+  var seededCategories = [
+    { id: 'cat-breast', name: 'Chicken Breast', createdAt: new Date().toISOString() },
+    { id: 'cat-wing', name: 'Chicken Wings', createdAt: new Date().toISOString() },
+    { id: 'cat-skewer', name: 'Processed Food', createdAt: new Date().toISOString() }
+  ];
+
+  var seededBuyers = [
+    {
+      id: 'b-nhfoods',
+      name: 'NH Foods Japan Co., Ltd.',
+      contact: 'Mr. Takashi Tanaka',
+      billAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      addr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      shipTo: 'Yokohama Port Warehouse',
+      tel: '+81-3-1234-5678',
+      fax: '+81-3-1234-5679',
+      email: 'tanaka@nhfoods.co.jp',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'Requires high yield and premium packing'
+    },
+    {
+      id: 'b-eurofood',
+      name: 'EuroFood Distribution NV',
+      contact: 'Ms. Marie Dubois',
+      billAddr: 'Avenue Louise 326, Brussels, Belgium',
+      addr: 'Avenue Louise 326, Brussels, Belgium',
+      shipTo: 'Rotterdam Port Terminal 1',
+      tel: '+32-2-987-6543',
+      fax: '+32-2-987-6544',
+      email: 'm.dubois@eurofood.be',
+      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
+      remarks: 'Strict ETD schedule'
+    },
+    {
+      id: 'b-singfood',
+      name: 'Singapore Poultry Importers Pte Ltd',
+      contact: 'Mr. Lee Kian Seng',
+      billAddr: '50 Pasir Panjang Road, Singapore',
+      addr: '50 Pasir Panjang Road, Singapore',
+      shipTo: 'Singapore Jurong Cold Store',
+      tel: '+65-6789-0123',
+      fax: '+65-6789-0124',
+      email: 'lee.ks@singpoultry.com.sg',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'HALAL certificate required'
+    }
+  ];
+
+  var seededProducts = [
+    {
+      id: 'p-breast-bls',
+      code: 'BLS-01',
+      name: 'Frozen Boneless Skinless Breast',
+      cat: 'Chicken Breast',
+      packing: '10kg Carton (Inner PE Bag)',
+      ft40: 25,
+      ft20: 12,
+      raw: 'Breast',
+      yield: 75,
+      yield2: 68,
+      buyerId: ''
+    },
+    {
+      id: 'p-wing-mjw',
+      code: 'MJW-02',
+      name: 'Frozen Chicken Middle Joint Wing',
+      cat: 'Chicken Wings',
+      packing: '12kg Carton (Layer Pack)',
+      ft40: 24,
+      ft20: 11,
+      raw: 'Wing',
+      yield: 82,
+      yield2: 78,
+      buyerId: ''
+    },
+    {
+      id: 'p-proc-yaki',
+      code: 'YAK-03',
+      name: 'Charcoal Grilled Yakitori Skewer',
+      cat: 'Processed Food',
+      packing: '5kg Box (Vacuum Packed)',
+      ft40: 20,
+      ft20: 9,
+      raw: 'Leg',
+      yield: 65,
+      yield2: 60,
+      buyerId: ''
+    }
+  ];
+
+  var seededPorts = [
+    { id: 'port-yoko', name: 'Yokohama', country: 'Japan' },
+    { id: 'port-rot', name: 'Rotterdam', country: 'Netherlands' },
+    { id: 'port-sing', name: 'Singapore', country: 'Singapore' }
+  ];
+
+  var seededPayTerms = [
+    {
+      id: 'pt-default',
+      name: 'Default L/C',
+      type: 'lc',
+      text: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)'
+    },
+    {
+      id: 'pt-tt30',
+      name: 'TT 30 Days',
+      type: 'tt_full',
+      text: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.'
+    }
+  ];
+
+  var yr = new Date().getFullYear();
+  var seededContracts = [
+    {
+      id: 'c-mock-1',
+      date: (yr - 1) + '-11-15',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-nhfoods',
+      buyerName: 'NH Foods Japan Co., Ltd.',
+      buyerContact: 'Mr. Takashi Tanaka',
+      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerTel: '+81-3-1234-5678',
+      buyerFax: '+81-3-1234-5679',
+      shipToId: 'b-nhfoods',
+      shipToName: 'NH Foods Japan Co., Ltd.',
+      shipToAddr: 'Yokohama Port Warehouse',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'Requires high yield and premium packing',
+      payType: 'lc',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: (yr - 1) + '-11-16T09:00:00Z',
+      managerApproveDate: (yr - 1) + '-11-16T14:30:00Z',
+      savedAt: (yr - 1) + '-11-15T08:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26001',
+          shipmentDoc: 'Shipment during January ' + yr,
+          shipmentMonth: 'January ' + yr,
+          port: 'Yokohama',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '1850', total: '92500', incoterm: 'CIF', custPo: 'PO-10025' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '30', price: '2200', total: '66000', incoterm: 'CIF', custPo: 'PO-10026' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-2',
+      date: (yr - 1) + '-12-10',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-eurofood',
+      buyerName: 'EuroFood Distribution NV',
+      buyerContact: 'Ms. Marie Dubois',
+      buyerBillAddr: 'Avenue Louise 326, Brussels, Belgium',
+      buyerAddr: 'Avenue Louise 326, Brussels, Belgium',
+      buyerTel: '+32-2-987-6543',
+      buyerFax: '+32-2-987-6544',
+      shipToId: 'b-eurofood',
+      shipToName: 'EuroFood Distribution NV',
+      shipToAddr: 'Rotterdam Port Terminal 1',
+      incoterm: 'FOB',
+      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
+      remarks: 'Strict ETD schedule',
+      payType: 'tt_full',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: (yr - 1) + '-12-11T10:00:00Z',
+      managerApproveDate: (yr - 1) + '-12-11T16:00:00Z',
+      savedAt: (yr - 1) + '-12-10T11:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26002',
+          shipmentDoc: 'Shipment during February ' + yr,
+          shipmentMonth: 'February ' + yr,
+          port: 'Rotterdam',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '40', price: '1900', total: '76000', incoterm: 'FOB', custPo: 'PO-EU-987' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '25', price: '2180', total: '54500', incoterm: 'FOB', custPo: 'PO-EU-988' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-3',
+      date: yr + '-01-05',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-singfood',
+      buyerName: 'Singapore Poultry Importers Pte Ltd',
+      buyerContact: 'Mr. Lee Kian Seng',
+      buyerBillAddr: '50 Pasir Panjang Road, Singapore',
+      buyerAddr: '50 Pasir Panjang Road, Singapore',
+      buyerTel: '+65-6789-0123',
+      buyerFax: '+65-6789-0124',
+      shipToId: 'b-singfood',
+      shipToName: 'Singapore Poultry Importers Pte Ltd',
+      shipToAddr: 'Singapore Jurong Cold Store',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'HALAL certificate required',
+      payType: 'lc',
+      hasCom: true,
+      comType: 'pct',
+      comVal: 1.5,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: yr + '-01-06T09:00:00Z',
+      managerApproveDate: yr + '-01-06T15:00:00Z',
+      savedAt: yr + '-01-05T08:30:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26003',
+          shipmentDoc: 'Shipment during March ' + yr,
+          shipmentMonth: 'March ' + yr,
+          port: 'Singapore',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '60', price: '1880', total: '112800', incoterm: 'CIF', custPo: 'PO-SG-441' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '35', price: '2250', total: '78750', incoterm: 'CIF', custPo: 'PO-SG-442' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-4',
+      date: yr + '-02-12',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-nhfoods',
+      buyerName: 'NH Foods Japan Co., Ltd.',
+      buyerContact: 'Mr. Takashi Tanaka',
+      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerTel: '+81-3-1234-5678',
+      buyerFax: '+81-3-1234-5679',
+      shipToId: 'b-nhfoods',
+      shipToName: 'NH Foods Japan Co., Ltd.',
+      shipToAddr: 'Yokohama Port Warehouse',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'Requires high yield and premium packing',
+      payType: 'lc',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: yr + '-02-13T09:00:00Z',
+      managerApproveDate: yr + '-02-13T14:00:00Z',
+      savedAt: yr + '-02-12T10:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26004',
+          shipmentDoc: 'Shipment during April ' + yr,
+          shipmentMonth: 'April ' + yr,
+          port: 'Yokohama',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '1920', total: '96000', incoterm: 'CIF', custPo: 'PO-10048' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '30', price: '2300', total: '69000', incoterm: 'CIF', custPo: 'PO-10049' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-5',
+      date: yr + '-03-15',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-eurofood',
+      buyerName: 'EuroFood Distribution NV',
+      buyerContact: 'Ms. Marie Dubois',
+      buyerBillAddr: 'Avenue Louise 326, Brussels, Belgium',
+      buyerAddr: 'Avenue Louise 326, Brussels, Belgium',
+      buyerTel: '+32-2-987-6543',
+      buyerFax: '+32-2-987-6544',
+      shipToId: 'b-eurofood',
+      shipToName: 'EuroFood Distribution NV',
+      shipToAddr: 'Rotterdam Port Terminal 1',
+      incoterm: 'FOB',
+      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
+      remarks: 'Strict ETD schedule',
+      payType: 'tt_full',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: yr + '-03-16T10:00:00Z',
+      managerApproveDate: yr + '-03-16T16:00:00Z',
+      savedAt: yr + '-03-15T11:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26005',
+          shipmentDoc: 'Shipment during May ' + yr,
+          shipmentMonth: 'May ' + yr,
+          port: 'Rotterdam',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '45', price: '1950', total: '87750', incoterm: 'FOB', custPo: 'PO-EU-1052' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '28', price: '2350', total: '65800', incoterm: 'FOB', custPo: 'PO-EU-1053' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-6',
+      date: yr + '-04-10',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-nhfoods',
+      buyerName: 'NH Foods Japan Co., Ltd.',
+      buyerContact: 'Mr. Takashi Tanaka',
+      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerTel: '+81-3-1234-5678',
+      buyerFax: '+81-3-1234-5679',
+      shipToId: 'b-nhfoods',
+      shipToName: 'NH Foods Japan Co., Ltd.',
+      shipToAddr: 'Yokohama Port Warehouse',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'Requires high yield and premium packing',
+      payType: 'lc',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'approved',
+      supervisorApproveDate: yr + '-04-11T09:00:00Z',
+      managerApproveDate: yr + '-04-11T14:00:00Z',
+      savedAt: yr + '-04-10T10:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26006',
+          shipmentDoc: 'Shipment during June ' + yr,
+          shipmentMonth: 'June ' + yr,
+          port: 'Yokohama',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '55', price: '1990', total: '109450', incoterm: 'CIF', custPo: 'PO-10089' },
+            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '32', price: '2400', total: '76800', incoterm: 'CIF', custPo: 'PO-10090' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-7',
+      date: yr + '-05-20',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-nhfoods',
+      buyerName: 'NH Foods Japan Co., Ltd.',
+      buyerContact: 'Mr. Takashi Tanaka',
+      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
+      buyerTel: '+81-3-1234-5678',
+      buyerFax: '+81-3-1234-5679',
+      shipToId: 'b-nhfoods',
+      shipToName: 'NH Foods Japan Co., Ltd.',
+      shipToAddr: 'Yokohama Port Warehouse',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'Requires high yield and premium packing',
+      payType: 'lc',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'pending_supervisor',
+      supervisorApproveDate: null,
+      managerApproveDate: null,
+      savedAt: yr + '-05-20T10:00:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26007',
+          shipmentDoc: 'Shipment during July ' + yr,
+          shipmentMonth: 'July ' + yr,
+          port: 'Yokohama',
+          rows: [
+            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '2020', total: '101000', incoterm: 'CIF', custPo: 'PO-10112' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'c-mock-8',
+      date: yr + '-05-22',
+      formNo: 'FM-MK-03/04 Rev.01',
+      buyerId: 'b-singfood',
+      buyerName: 'Singapore Poultry Importers Pte Ltd',
+      buyerContact: 'Mr. Lee Kian Seng',
+      buyerBillAddr: '50 Pasir Panjang Road, Singapore',
+      buyerAddr: '50 Pasir Panjang Road, Singapore',
+      buyerTel: '+65-6789-0123',
+      buyerFax: '+65-6789-0124',
+      shipToId: 'b-singfood',
+      shipToName: 'Singapore Poultry Importers Pte Ltd',
+      shipToAddr: 'Singapore Jurong Cold Store',
+      incoterm: 'CIF',
+      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
+      remarks: 'HALAL certificate required',
+      payType: 'lc',
+      hasCom: false,
+      comType: 'pct',
+      comVal: 0,
+      status: 'active',
+      version: 1,
+      originalId: null,
+      approvalStatus: 'pending_manager',
+      supervisorApproveDate: yr + '-05-23T09:00:00Z',
+      managerApproveDate: null,
+      savedAt: yr + '-05-22T08:30:00Z',
+      groups: [
+        {
+          scNo: 'TPG-26008',
+          shipmentDoc: 'Shipment during July ' + yr,
+          shipmentMonth: 'July ' + yr,
+          port: 'Singapore',
+          rows: [
+            { no: 1, productId: 'p-proc-yaki', productName: 'Charcoal Grilled Yakitori Skewer', productCode: 'YAK-03', cat: 'Processed Food', rawMat: 'Leg', yieldPct: 65, yield2Pct: 60, packing: '5kg Box (Vacuum Packed)', qty: '20', price: '3250', total: '65000', incoterm: 'CIF', custPo: 'PO-SG-502' }
+          ]
+        }
+      ]
+    }
+  ];
+
+  var seededSaleOrders = [];
+  seededContracts.forEach(function(c) {
+    c.groups.forEach(function(g) {
+      if(!g.scNo) return;
+      var newSO = {
+        id: 'so-' + g.scNo + '-v1',
+        soNo: g.scNo,
+        version: 1,
+        contractId: c.id,
+        date: c.date,
+        buyerName: c.buyerName,
+        buyerId: c.buyerId,
+        shipmentDoc: g.shipmentDoc,
+        shipmentMonth: g.shipmentMonth,
+        port: g.port,
+        rows: g.rows.map(function(r, i) {
+          return {
+            item: i + 1,
+            orderNo: r.custPo,
+            pCode: r.productCode,
+            description: r.productName,
+            packing: r.packing,
+            qty: r.qty,
+            shipment: g.shipmentDoc,
+            port: g.port
+          };
+        }),
+        status: (c.approvalStatus === 'approved') ? 'acknowledged' : 'draft',
+        remarks: '',
+        sentAt: (c.approvalStatus === 'approved') ? c.supervisorApproveDate : null,
+        acknowledgedAt: (c.approvalStatus === 'approved') ? c.managerApproveDate : null,
+        supersededAt: null
+      };
+      seededSaleOrders.push(newSO);
+    });
+  });
+
+  var seededShipEntries = [
+    {
+      id: 'sh-mock-1',
+      invNo: '001/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-001',
+      scNo: 'TPG-26001',
+      customer: 'NH Foods Japan Co., Ltd.',
+      port: 'Yokohama',
+      finishDate: yr + '-01-08',
+      lab: yr + '-01-06',
+      cy: yr + '-01-04',
+      returnDate: yr + '-01-03',
+      closing: yr + '-01-05 23:59',
+      etd: yr + '-01-10',
+      eta: yr + '-01-25',
+      agent: 'ONE',
+      vessel: 'Ocean Express v.012W',
+      freight: '2500',
+      containerNo: 'TGBU1234567',
+      note: 'Seeded Jan Yokohama shipment',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'sh-mock-2',
+      invNo: '002/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-002',
+      scNo: 'TPG-26002',
+      customer: 'EuroFood Distribution NV',
+      port: 'Rotterdam',
+      finishDate: yr + '-02-09',
+      lab: yr + '-02-07',
+      cy: yr + '-02-05',
+      returnDate: yr + '-02-04',
+      closing: yr + '-02-06 23:59',
+      etd: yr + '-02-12',
+      eta: yr + '-03-08',
+      agent: 'Maersk',
+      vessel: 'Maersk Rotterdam v.204S',
+      freight: '4500',
+      containerNo: 'MSKU7654321',
+      note: 'Seeded Feb Rotterdam shipment',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'sh-mock-3',
+      invNo: '003/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-003',
+      scNo: 'TPG-26003',
+      customer: 'Singapore Poultry Importers Pte Ltd',
+      port: 'Singapore',
+      finishDate: yr + '-03-05',
+      lab: yr + '-03-03',
+      cy: yr + '-03-02',
+      returnDate: yr + '-03-01',
+      closing: yr + '-03-04 23:59',
+      etd: yr + '-03-08',
+      eta: yr + '-03-15',
+      agent: 'ONE',
+      vessel: 'Ocean Singapore v.088E',
+      freight: '1500',
+      containerNo: 'ONEU9988776',
+      note: 'Seeded Mar Singapore shipment',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'sh-mock-4',
+      invNo: '004/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-004',
+      scNo: 'TPG-26004',
+      customer: 'NH Foods Japan Co., Ltd.',
+      port: 'Yokohama',
+      finishDate: yr + '-04-10',
+      lab: yr + '-04-08',
+      cy: yr + '-04-06',
+      returnDate: yr + '-04-05',
+      closing: yr + '-04-07 23:59',
+      etd: yr + '-04-14',
+      eta: yr + '-04-29',
+      agent: 'Cosco',
+      vessel: 'Cosco Hamburg v.055N',
+      freight: '2600',
+      containerNo: 'COSU8877665',
+      note: 'Seeded Apr Yokohama shipment',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'sh-mock-5',
+      invNo: '005/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-005',
+      scNo: 'TPG-26005',
+      customer: 'EuroFood Distribution NV',
+      port: 'Rotterdam',
+      finishDate: yr + '-05-12',
+      lab: yr + '-05-10',
+      cy: yr + '-05-08',
+      returnDate: yr + '-05-07',
+      closing: yr + '-05-09 23:59',
+      etd: yr + '-05-18',
+      eta: yr + '-06-12',
+      agent: 'Maersk',
+      vessel: 'Maersk Antwerp v.311N',
+      freight: '4700',
+      containerNo: 'MSKU4455667',
+      note: 'Seeded May Rotterdam shipment',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'sh-mock-6',
+      invNo: '006/' + String(yr).slice(-2),
+      ref: 'REF-' + yr + '-006',
+      scNo: 'TPG-26006',
+      customer: 'NH Foods Japan Co., Ltd.',
+      port: 'Yokohama',
+      finishDate: yr + '-05-28',
+      lab: yr + '-05-26',
+      cy: yr + '-05-24',
+      returnDate: yr + '-05-23',
+      closing: yr + '-05-25 23:59',
+      etd: yr + '-06-02',
+      eta: yr + '-06-17',
+      agent: 'ONE',
+      vessel: 'Ocean Tokyo v.044W',
+      freight: '2550',
+      containerNo: 'TGBU9876543',
+      note: 'Seeded Jun Yokohama shipment',
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  if (useFirebase && db) {
+    await Promise.all([
+      fbBatchSetAsync('categories', seededCategories),
+      fbBatchSetAsync('buyers', seededBuyers),
+      fbBatchSetAsync('products', seededProducts),
+      fbBatchSetAsync('ports', seededPorts),
+      fbBatchSetAsync('payTerms', seededPayTerms),
+      fbBatchSetAsync('contracts', seededContracts),
+      fbBatchSetAsync('saleOrders', seededSaleOrders),
+      fbBatchSetAsync('shipEntries', seededShipEntries)
+    ]);
+  }
+
+  window.categories = seededCategories;
+  window.buyers = seededBuyers;
+  window.products = seededProducts;
+  window.ports = seededPorts;
+  window.payTerms = seededPayTerms;
+  window.contracts = seededContracts;
+  window.saleOrders = seededSaleOrders;
+  window.shipEntries = seededShipEntries;
+
+  popCreateDDs();
+  updateApprovalBadge();
+  if (typeof initShipTrack === 'function') {
+    try {
+      initShipTrack();
+    } catch(e) { console.warn(e); }
+  }
+}
+
+// โ• โ• โ•  APP INITIALIZATION โ• โ• โ• 
 async function initApp() {
   document.getElementById('loading-overlay').classList.add('show');
   document.getElementById('loading-text').textContent = 'Loading data...';
@@ -842,7 +1626,7 @@ async function initApp() {
   document.getElementById('loading-overlay').classList.remove('show');
 }
 
-// ═══ LOGIN & LOGOUT HANDLERS ═══
+// โ•โ•โ• LOGIN & LOGOUT HANDLERS โ•โ•โ•
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var pass = document.getElementById('login-pass').value;
@@ -1486,7 +2270,7 @@ function popDashFilters(){
   bfEl.innerHTML='<option value="">All Buyers</option>';
   buyers.forEach(function(b){var o=document.createElement('option');o.value=b.id;o.textContent=b.name;bfEl.appendChild(o);});bfEl.value=bv;
 }
-// ── FIXED renderDash: no rowspan, each product row is fully self-contained ──
+// โ”€โ”€ FIXED renderDash: no rowspan, each product row is fully self-contained โ”€โ”€
 function renderDash(keepPage){
   if (!keepPage) {
     dashPage = 0;
@@ -1589,7 +2373,7 @@ function renderDash(keepPage){
       var sepStyle=isFirst?'border-top:2px solid #c5d8ec':'';
       rows+='<tr style="'+sepStyle+'">';
       if(isExcept){
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">↑</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">โ‘</span>')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
         rows+='<td style="text-align:right">'+r.qty+'</td>';
@@ -1608,7 +2392,7 @@ function renderDash(keepPage){
         rows+='<td style="text-align:center;font-size:10px">'+(isFirst?verCell:'')+'</td>';
         rows+='<td>'+(isFirst?actCell:'')+'</td>';
       } else {
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">↑</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">โ‘</span>')+'</td>';
         rows+='<td style="'+dimStyle+'">'+(isFirst?'<span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
@@ -1646,10 +2430,118 @@ function renderDash(keepPage){
     rows+='</tr>';
   });
   document.getElementById('dash-body').innerHTML=rows;
+  renderPriceTrend();
 }
 function changeDashPage(dir) {
   dashPage += dir;
   renderDash(true);
+}
+var priceTrendChart=null;
+function renderPriceTrend(){
+  // Populate filter dropdowns
+  var allProds={},allBuyers={},allYears={};
+  var latestC=getLatestContracts();
+  latestC.forEach(function(c){
+    c.groups.forEach(function(g){
+      var mo=g.shipmentMonth||'';
+      if(mo){var p=mo.split(' ');if(p[1])allYears[p[1]]=1;}
+      g.rows.forEach(function(r){
+        if(r.productName&&r.price)allProds[r.productName]=1;
+      });
+    });
+    if(c.buyerName)allBuyers[c.buyerName]=c.buyerId;
+  });
+  var prodF=document.getElementById('pt-fil-product').value;
+  var buyerF=document.getElementById('pt-fil-buyer').value;
+  var yearF=document.getElementById('pt-fil-year').value;
+  // Rebuild selects preserving current value
+  var pSel=document.getElementById('pt-fil-product');var pv=pSel.value;
+  pSel.innerHTML='<option value="">All Products</option>';
+  Object.keys(allProds).sort().forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;pSel.appendChild(o);});pSel.value=pv;
+  var bSel=document.getElementById('pt-fil-buyer');var bv=bSel.value;
+  bSel.innerHTML='<option value="">All Buyers</option>';
+  Object.keys(allBuyers).sort().forEach(function(b){var o=document.createElement('option');o.value=allBuyers[b];o.textContent=b;bSel.appendChild(o);});bSel.value=bv;
+  var ySel=document.getElementById('pt-fil-year');var yv=ySel.value;
+  ySel.innerHTML='<option value="">All Years</option>';
+  Object.keys(allYears).sort().forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;ySel.appendChild(o);});ySel.value=yv;
+  // Build grouped data: key = month||product
+  var grouped={};
+  latestC.forEach(function(c){
+    if(buyerF&&c.buyerId!==buyerF)return;
+    c.groups.forEach(function(g){
+      var mo=g.shipmentMonth||'';
+      if(!mo)return;
+      if(yearF&&mo.indexOf(yearF)<0)return;
+      g.rows.forEach(function(r){
+        var pr=parseFloat(r.price);
+        if(!r.productName||!pr)return;
+        if(prodF&&r.productName!==prodF)return;
+        var key=moKey(mo)+'||'+r.productName;
+        if(!grouped[key])grouped[key]={month:mo,moSort:moKey(mo),product:r.productName,buyer:c.buyerName,prices:[],qtys:[],count:0};
+        grouped[key].prices.push(pr);
+        grouped[key].qtys.push(parseFloat(r.qty)||0);
+        grouped[key].count++;
+      });
+    });
+  });
+  var grows=Object.keys(grouped).map(function(k){return grouped[k];}).sort(function(a,b){return a.moSort.localeCompare(b.moSort)||a.product.localeCompare(b.product);});
+  document.getElementById('pt-empty').style.display=grows.length?'none':'block';
+  document.getElementById('pt-table').style.display=grows.length?'':'none';
+  document.getElementById('price-trend-chart').style.display=grows.length?'':'none';
+  if(!grows.length){if(priceTrendChart){priceTrendChart.destroy();priceTrendChart=null;}return;}
+  // Build table
+  var html='';
+  grows.forEach(function(r,idx){
+    var mn=Math.min.apply(null,r.prices);var mx=Math.max.apply(null,r.prices);
+    var avg=r.prices.reduce(function(s,v){return s+v;},0)/r.prices.length;
+    var avgQty=r.qtys.reduce(function(s,v){return s+v;},0)/r.qtys.length;
+    // Find previous record for same product
+    var prevRecord=null;
+    for(var j=idx-1;j>=0;j--){if(grows[j].product===r.product){prevRecord=grows[j];break;}}
+    var changeHtml='<span style="color:#aaa">-</span>';
+    if(prevRecord){
+      var prevAvg=prevRecord.prices.reduce(function(s,v){return s+v;},0)/prevRecord.prices.length;
+      var diff=avg-prevAvg;var pct=(diff/prevAvg)*100;
+      if(diff>0)changeHtml='<span style="color:#c62828;font-weight:bold">▲ '+pct.toFixed(1)+'% (+$'+diff.toFixed(0)+')</span>';
+      else if(diff<0)changeHtml='<span style="color:#2e7d32;font-weight:bold">▼ '+Math.abs(pct).toFixed(1)+'% (-$'+Math.abs(diff).toFixed(0)+')</span>';
+      else changeHtml='<span style="color:#666">0.0%</span>';
+    }
+    html+='<tr><td>'+r.month+'</td><td>'+r.product+'</td><td>'+r.buyer+'</td>';
+    html+='<td style="text-align:center">'+r.count+'</td>';
+    html+='<td style="text-align:right">'+avgQty.toFixed(2)+'</td>';
+    html+='<td style="text-align:right;color:#2e7d32">$'+mn.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
+    html+='<td style="text-align:right;color:#c62828">$'+mx.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
+    html+='<td style="text-align:right;font-weight:700">$'+avg.toFixed(2)+'</td>';
+    html+='<td>'+changeHtml+'</td></tr>';
+  });
+  document.getElementById('pt-tbody').innerHTML=html;
+  // Build chart
+  var months=[],ms={};grows.forEach(function(r){if(!ms[r.month]){ms[r.month]=1;months.push(r.month);}});
+  var prodSet={};grows.forEach(function(r){prodSet[r.product]=1;});
+  var prodList=prodF?[prodF]:Object.keys(prodSet).sort();
+  var colors=['#1a3a5c','#e65100','#2e7d32','#6a1b9a','#c62828','#0277bd','#ad1457','#00695c','#bf360c','#283593'];
+  var showMA=document.getElementById('pt-show-ma')&&document.getElementById('pt-show-ma').checked;
+  var datasets=[];
+  prodList.forEach(function(p,i){
+    var monthlyAvgs=months.map(function(m){
+      var match=grows.filter(function(r){return r.month===m&&r.product===p;});
+      if(!match.length)return null;
+      var ap=match.reduce(function(arr,r){return arr.concat(r.prices);},[]);
+      return parseFloat((ap.reduce(function(s,v){return s+v;},0)/ap.length).toFixed(2));
+    });
+    datasets.push({label:p,data:monthlyAvgs,borderColor:colors[i%colors.length],backgroundColor:colors[i%colors.length]+'33',tension:0.3,pointRadius:4,fill:false});
+    if(showMA){
+      var maData=monthlyAvgs.map(function(val,idx2){
+        var sum=0,cnt=0;
+        for(var off=0;off<3;off++){if(idx2-off>=0&&monthlyAvgs[idx2-off]!==null){sum+=monthlyAvgs[idx2-off];cnt++;}}
+        return cnt>0?parseFloat((sum/cnt).toFixed(2)):null;
+      });
+      datasets.push({label:p+' (3-Mo MA)',data:maData,borderColor:colors[i%colors.length],borderDash:[5,5],backgroundColor:'transparent',tension:0.3,pointRadius:2,fill:false});
+    }
+  });
+  var ctx=document.getElementById('price-trend-chart').getContext('2d');
+  if(priceTrendChart)priceTrendChart.destroy();
+  priceTrendChart=new Chart(ctx,{type:'line',data:{labels:months,datasets:datasets},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:10}}}},scales:{y:{ticks:{callback:function(v){return'$'+v.toLocaleString();}},title:{display:true,text:'Price (USD/MT)'}},x:{title:{display:true,text:'Shipment Month'}}}}});
 }
 var SHEET_ID='1hLX9yxpuc6lZ0ELwP2OfKS0kVWgRU2vfqgwpBVJVbVY';
 var BUYER_GID='344446381';
@@ -1680,9 +2572,9 @@ function importPasteData(type){
   var area=document.getElementById(type==='buyers'?'buyer-paste-area':'prod-paste-area');
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var text=area.value.trim();
-  if(!text){statusEl.textContent='❌ ไม่มีข้อมูล';statusEl.style.color='#c62828';return;}
+  if(!text){statusEl.textContent='โ เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅ';statusEl.style.color='#c62828';return;}
   var rows=parseTSV(text);
-  if(rows.length<2){statusEl.textContent='❌ ข้อมูลไม่ถูกต้อง';statusEl.style.color='#c62828';return;}
+  if(rows.length<2){statusEl.textContent='โ เธเนเธญเธกเธนเธฅเนเธกเนเธ–เธนเธเธ•เนเธญเธ';statusEl.style.color='#c62828';return;}
   if(type==='buyers'){
     // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
     var imported=[];
@@ -1697,14 +2589,14 @@ function importPasteData(type){
         fax:'',payment:PAY_TERMS[ptIdx]||PAY_TERMS[1],remarks:'',shipTo:''
       });
     }
-    if(!imported.length){statusEl.textContent='❌ ไม่พบข้อมูล buyer';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ buyer';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = buyers.map(function(b){ return b.id; });
       fbBatchDel('buyers', oldIds);
     }
     buyers=imported;sd();renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
     fbBatchSet('buyers', buyers);
-    statusEl.textContent='✅ Import '+imported.length+' buyers เรียบร้อย';
+    statusEl.textContent='โ… Import '+imported.length+' buyers เน€เธฃเธตเธขเธเธฃเนเธญเธข';
     statusEl.style.color='#2e7d32';
     area.value='';
   } else {
@@ -1725,14 +2617,14 @@ function importPasteData(type){
         buyerId:b?b.id:''
       });
     }
-    if(!imported.length){statusEl.textContent='❌ ไม่พบข้อมูล product';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ product';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = products.map(function(p){ return p.id; });
       fbBatchDel('products', oldIds);
     }
     products=imported;sd();renderProdList();popCatSel();popProdCatFilter();
     fbBatchSet('products', products);
-    statusEl.textContent='✅ Import '+imported.length+' products เรียบร้อย';
+    statusEl.textContent='โ… Import '+imported.length+' products เน€เธฃเธตเธขเธเธฃเนเธญเธข';
     statusEl.style.color='#2e7d32';
     area.value='';
   }
@@ -1742,10 +2634,10 @@ function importFromSheet(type){
   var gid=type==='buyers'?BUYER_GID:PROD_GID;
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+gid;
-  statusEl.textContent='⏳ กำลังโหลด...';statusEl.style.color='#e65100';
+  statusEl.textContent='โณ เธเธณเธฅเธฑเธเนเธซเธฅเธ”...';statusEl.style.color='#e65100';
   fetch(url).then(function(r){return r.text();}).then(function(csv){
     var rows=parseCSV(csv);
-    if(rows.length<2){statusEl.textContent='❌ ไม่พบข้อมูล';return;}
+    if(rows.length<2){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ';return;}
     if(type==='buyers'){
       // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
       var imported=[];
@@ -1774,7 +2666,7 @@ function importFromSheet(type){
       buyers=imported;sd();
       renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
       fbBatchSet('buyers', buyers);
-      statusEl.textContent='✅ Import '+imported.length+' buyers เรียบร้อย';
+      statusEl.textContent='โ… Import '+imported.length+' buyers เน€เธฃเธตเธขเธเธฃเนเธญเธข';
       statusEl.style.color='#2e7d32';
     } else {
       // cols: #,P-CODE,CUSTOMER,DESCRIPTION,PACKING SIZE,Standard Quantity,Measurements,PMK,Category,Yield,Raw Meat,Yield,Raw Meat Use
@@ -1807,12 +2699,12 @@ function importFromSheet(type){
       products=imported;sd();
       renderProdList();popCatSel();popProdCatFilter();
       fbBatchSet('products', products);
-      statusEl.textContent='✅ Import '+imported.length+' products เรียบร้อย';
+      statusEl.textContent='โ… Import '+imported.length+' products เน€เธฃเธตเธขเธเธฃเนเธญเธข';
       statusEl.style.color='#2e7d32';
     }
     setTimeout(function(){statusEl.textContent='';},5000);
   }).catch(function(e){
-    statusEl.textContent='❌ Error: '+e.message+' (ตรวจสอบว่า Sheet เป็น Public)';
+    statusEl.textContent='โ Error: '+e.message+' (เธ•เธฃเธงเธเธชเธญเธเธงเนเธฒ Sheet เน€เธเนเธ Public)';
     statusEl.style.color='#c62828';
   });
 }
@@ -2295,9 +3187,9 @@ function renderFreightTrend(){
       var diff = avg - prevAvg;
       var pct = (diff / prevAvg) * 100;
       if (diff > 0) {
-        changeHtml = '<span style="color:#c62828;font-weight:bold">▲ ' + pct.toFixed(1) + '% (+$' + diff.toFixed(0) + ')</span>';
+        changeHtml = '<span style="color:#c62828;font-weight:bold">โ–ฒ ' + pct.toFixed(1) + '% (+$' + diff.toFixed(0) + ')</span>';
       } else if (diff < 0) {
-        changeHtml = '<span style="color:#2e7d32;font-weight:bold">▼ ' + Math.abs(pct).toFixed(1) + '% (-$' + Math.abs(diff).toFixed(0) + ')</span>';
+        changeHtml = '<span style="color:#2e7d32;font-weight:bold">โ–ผ ' + Math.abs(pct).toFixed(1) + '% (-$' + Math.abs(diff).toFixed(0) + ')</span>';
       } else {
         changeHtml = '<span style="color:#666">0.0%</span>';
       }
@@ -2451,7 +3343,7 @@ function renderRawMat(){
   }
   
   var warnEl=document.getElementById('rm-yield-warn');
-  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - กรอก Yield Category & Yield Raw Material ใน Product Master';}
+  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - เธเธฃเธญเธ Yield Category & Yield Raw Material เนเธ Product Master';}
   else warnEl.style.display='none';
   
   var months=sortMonths(Object.keys(byMonth));
@@ -2539,7 +3431,7 @@ function showAppModal(opts) {
     var confirmBtn = document.getElementById('app-modal-confirm');
     var type = opts.type || 'confirm';
     icon.className = 'app-modal-icon ' + type;
-    icon.textContent = type === 'success' ? '✓' : '?';
+    icon.textContent = type === 'success' ? 'โ“' : '?';
     title.textContent = opts.title || 'Confirm Action';
     message.textContent = opts.message || '';
     input.style.display = opts.input ? 'block' : 'none';
@@ -2611,7 +3503,7 @@ function showAppPrompt(title, message, opts) {
   });
 }
 
-// ═══ APPROVAL WORKFLOW HELPERS ═══
+// โ•โ•โ• APPROVAL WORKFLOW HELPERS โ•โ•โ•
 function getCurrentApprovalRole() {
   if (currentUser && currentUser.role) return currentUser.role;
   var selector = document.getElementById('mock-role-selector');
