@@ -9,6 +9,9 @@
 body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:190px;background:#1a3a5c;color:#fff;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.mobile-topbar{display:none}
+.mobile-menu-btn{width:34px;height:34px;border:1px solid rgba(255,255,255,0.35);border-radius:4px;background:#1a3a5c;color:#fff;font-size:20px;line-height:1;cursor:pointer}
+.sidebar-backdrop{display:none}
 .sidebar-logo{padding:12px;border-bottom:1px solid rgba(255,255,255,0.15);line-height:1.4}
 .sidebar-logo b{display:block;font-size:12px}
 .sidebar-logo span{font-size:10px;opacity:0.7}
@@ -105,11 +108,12 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .doc.pdf-page .doc-content{flex:1}
 .doc.pdf-page .doc-table tr{page-break-inside:avoid;break-inside:avoid}
 .doc.pdf-page .doc-footer-img{margin-top:auto}
-/* FIX: dash table โ€” flatten rowspan so columns stay aligned */
+.doc-stamp-img{position:absolute;right:34px;bottom:28px;width:96px;transform:rotate(-4deg);opacity:.92;z-index:20}
+/* FIX: dash table เนโฌโ€ flatten rowspan so columns stay aligned */
 #dash-body tr td {vertical-align:middle;}
 #dash-body tr.group-sep td {border-top:2px solid #c5d8ec;}
 #dash-body tr.subtotal-row td {background:#f0f4f8;font-weight:700;border-top:2px solid #c5d8ec;border-bottom:3px solid #c5d8ec;}
-/* โ•โ•โ• LOGIN & LOADING โ•โ•โ• */
+/* เนโ€ขยเนโ€ขยเนโ€ขย LOGIN & LOADING เนโ€ขยเนโ€ขยเนโ€ขย */
 .login-overlay{display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);z-index:9999;align-items:center;justify-content:center}
 .login-box{background:#fff;border-radius:12px;padding:36px 40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}
 .login-box h2{color:#1a3a5c;margin-bottom:4px;font-size:20px}
@@ -136,6 +140,26 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .app-modal-textarea{width:100%;min-height:86px;margin-top:10px;border:1px solid #d0d0d0;border-radius:4px;padding:8px;font-size:12px;font-family:Arial,sans-serif;resize:vertical}
 .app-modal-error{display:none;margin-top:7px;color:#c62828;font-size:11px;font-weight:700}
 .app-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;background:#f7f9fb;border-top:1px solid #edf1f5}
+@media (max-width: 768px){
+  .app{display:block;height:100vh;overflow:hidden}
+  .mobile-topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:850;background:#1a3a5c;color:#fff;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.18)}
+  .mobile-topbar-title{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+  .mobile-topbar-title b{font-size:12px}
+  .mobile-topbar-title span{font-size:10px;opacity:0.72}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:min(280px,82vw);z-index:900;transform:translateX(-100%);transition:transform .18s ease;box-shadow:10px 0 30px rgba(0,0,0,0.28)}
+  body.sidebar-open .sidebar{transform:translateX(0)}
+  .sidebar-backdrop{position:fixed;inset:0;background:rgba(10,24,39,0.48);z-index:890}
+  body.sidebar-open .sidebar-backdrop{display:block}
+  .main{height:calc(100vh - 50px);overflow-y:auto}
+  .page{padding:10px}
+  .card{padding:11px;margin-bottom:10px}
+  .master-grid{grid-template-columns:1fr}
+  .fil-bar{align-items:stretch}
+  .fil-bar select,.fil-bar input{width:100%}
+  .stat-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .overlay-box{width:96vw;margin:10px auto}
+  .doc{width:740px}
+}
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -145,11 +169,9 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Chart.js for Freight Trend -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<!-- Excel-derived seed master data -->
-<script src="seed-master-data.js"></script>
 </head>
 <body>
-<!-- โ•โ•โ• LOGIN OVERLAY โ•โ•โ• -->
+<!-- เนโ€ขยเนโ€ขยเนโ€ขย LOGIN OVERLAY เนโ€ขยเนโ€ขยเนโ€ขย -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
     <h2>Thai Poultry Group</h2>
@@ -160,7 +182,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="login-footer">TPG Sales Contract System v2.0</div>
   </div>
 </div>
-<!-- โ•โ•โ• LOADING OVERLAY โ•โ•โ• -->
+<!-- เนโ€ขยเนโ€ขยเนโ€ขย LOADING OVERLAY เนโ€ขยเนโ€ขยเนโ€ขย -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-text">Loading data...</div>
@@ -183,22 +205,25 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
   </div>
 </div>
 <div class="app" style="display:none" id="main-app">
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu">โก</button>
+  <div class="mobile-topbar-title"><b>Thai Poultry Group</b><span>Sales Contract System</span></div>
+</div>
+<div class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
 <div class="sidebar">
   <div class="sidebar-logo"><b>Thai Poultry Group</b><span>Sales Contract System</span></div>
   <div class="nav-sec">Documents</div>
-  <div class="nav-item active" onclick="showPage('create',this)">New Contract</div>
-  <div class="nav-item" onclick="showPage('dashboard',this)">Order Summary</div>
-  <div class="nav-item" onclick="showPage('approval',this)" id="nav-approval">Approval Queue <span id="approval-badge" class="badge badge-red" style="display:none;margin-left:5px"></span></div>
-  <div class="nav-item" onclick="showPage('shiptrack',this)">Shipment Tracking</div>
-  <div class="nav-item" onclick="showPage('rawmat',this)">Raw Material Plan</div>
+  <div class="nav-item active" data-page="create" data-perm="create" onclick="showPage('create',this)">New Contract</div>
+  <div class="nav-item" data-page="dashboard" data-perm="orderSummary" onclick="showPage('dashboard',this)">Order Summary</div>
+  <div class="nav-item" data-page="approval" data-perm="approveSaleContract" onclick="showPage('approval',this)" id="nav-approval">Approval Queue <span id="approval-badge" class="badge badge-red" style="display:none;margin-left:5px"></span></div>
+  <div class="nav-item" data-page="shiptrack" data-perm="shipmentTracking" onclick="showPage('shiptrack',this)">Shipment Tracking</div>
+  <div class="nav-item" data-page="rawmat" data-perm="rawMaterial" onclick="showPage('rawmat',this)">Raw Material Plan</div>
   <div class="nav-sec">Masters</div>
   <div class="nav-item" onclick="showPage('buyers',this)">Buyer Master</div>
   <div class="nav-item" onclick="showPage('products',this)">Product Master</div>
   <div class="nav-item" onclick="showPage('ports',this)">Ports</div>
+  <div class="nav-item" onclick="showPage('incoterms',this)">Incoterms</div>
   <div class="nav-item" onclick="showPage('payments',this)">Payment Terms</div>
-  <div class="nav-sec">Database</div>
-  <div class="nav-item" onclick="confirmSeedMockData()" style="color:#ffb74d">Seed Master Data</div>
-  
   <!-- Logged in User Status (bottom-left) -->
   <div class="sidebar-user" style="margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 11px;">
     <div style="font-weight: 700; color: #4db8ff; margin-bottom: 2px;" id="sb-user-name">Guest</div>
@@ -227,7 +252,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="fg" style="max-width:130px"><label>Issue Date</label><input type="date" id="f-date"></div>
     <div class="fg" style="max-width:170px"><label>Form No.</label><input type="text" value="FM-MK-03/04 Rev.01" readonly></div>
     <div class="fg"><label>Buyer</label><select id="f-buyer" onchange="onBuyerChange()"><option value="">Select Buyer</option></select></div>
-    <div class="fg" style="max-width:110px"><label>Incoterm</label><select id="f-incoterm"><option>CFR</option><option>CNF</option><option>CIF</option><option>FOB</option><option>EXW</option><option>CPT</option></select></div>
+    <div class="fg" style="max-width:130px"><label>Incoterm</label><select id="f-incoterm"><option value="">Select</option></select></div>
   </div>
   <div id="buyer-info" style="display:none;background:#f0f4f8;border-radius:4px;padding:6px 10px;font-size:11px;color:#444;margin-bottom:4px;line-height:1.6"></div>
   <div class="form-row">
@@ -354,11 +379,6 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
       <span style="font-weight:bold;color:#0d47a1;font-size:11px">Current User:</span>
       <span id="approval-user-label" style="font-size:11px;color:#333"></span>
       <span id="approval-role-label" class="badge badge-blue"></span>
-      <select id="mock-role-selector" onchange="renderApprovalPage()" style="display:none;border:1px solid #1a3a5c;border-radius:4px;padding:3px 7px;font-size:11px;background:#fff">
-        <option value="supervisor">Supervisor (Level 1 Approver)</option>
-        <option value="manager">Manager / Managing Director (Level 2 Approver)</option>
-        <option value="sales">Sales / Initiator</option>
-      </select>
       <span style="font-size:10px;color:#555">Approval actions are based on the logged-in account role.</span>
     </div>
   </div>
@@ -426,14 +446,6 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div id="page-buyers" class="page">
   <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Buyer Master</div>
-  <div style="margin-bottom:10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px">
-    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">๐“ Import เธเธฒเธ Google Sheet โ€” Paste เธเนเธญเธกเธนเธฅเธเธฒเธ CUSTOMER_DETAILS sheet</div>
-    <textarea id="buyer-paste-area" rows="4" placeholder="Copy เธ—เธฑเนเธ sheet เนเธฅเนเธง paste เธ—เธตเนเธเธตเน..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
-    <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-      <button class="btn btn-success btn-sm" onclick="importPasteData('buyers')">โฌ Import Buyers</button>
-      <span id="sync-buyer-status" style="font-size:11px;color:#2e7d32"></span>
-    </div>
-  </div>
   <div class="master-grid">
     <div class="card">
       <div class="card-title">Add / Edit Buyer</div>
@@ -455,14 +467,6 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div id="page-products" class="page">
   <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Product Master</div>
-  <div style="margin-bottom:10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px">
-    <div style="font-size:11px;font-weight:700;color:#1b5e20;margin-bottom:5px">๐“ Import เธเธฒเธ Google Sheet โ€” Paste เธเนเธญเธกเธนเธฅเธเธฒเธ PRODUCT_DB sheet</div>
-    <textarea id="prod-paste-area" rows="4" placeholder="Copy เธ—เธฑเนเธ sheet เนเธฅเนเธง paste เธ—เธตเนเธเธตเน..." style="width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:6px;font-size:11px;font-family:monospace;resize:vertical"></textarea>
-    <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-      <button class="btn btn-success btn-sm" onclick="importPasteData('products')">โฌ Import Products</button>
-      <span id="sync-prod-status" style="font-size:11px;color:#2e7d32"></span>
-    </div>
-  </div>
   <div class="master-grid">
     <div class="card">
       <div class="card-title">Add / Edit Product</div>
@@ -526,6 +530,18 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
       <div class="actions"><button class="btn btn-primary" onclick="savePort()">Save</button><button class="btn btn-outline" onclick="clearPortF()">Clear</button></div>
     </div>
     <div class="card"><div class="card-title">Port List</div><div class="mlist" id="port-list"></div></div>
+  </div>
+</div>
+<div id="page-incoterms" class="page">
+  <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Incoterm Master</div>
+  <div class="master-grid">
+    <div class="card">
+      <input type="hidden" id="inco-id">
+      <div class="form-row"><div class="fg"><label>Incoterm *</label><input id="inco-code" placeholder="CIF / CFR / FOB"></div></div>
+      <div class="form-row"><div class="fg"><label>Description</label><input id="inco-desc" placeholder="Optional"></div></div>
+      <div class="actions"><button class="btn btn-primary" onclick="saveIncoterm()">Save</button><button class="btn btn-outline" onclick="clearIncotermF()">Clear</button></div>
+    </div>
+    <div class="card"><div class="card-title">Incoterm List</div><div class="mlist" id="incoterm-list"></div></div>
   </div>
 </div>
 
@@ -658,9 +674,9 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div id="print-area" style="display:none"></div>
 <script type="text/javascript">
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-// FIREBASE CONFIG โ€” เนเธชเนเธเนเธฒเธเธฃเธดเธเธ—เธตเนเธเธตเนเน€เธกเธทเนเธญเธเธฃเนเธญเธก
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขย
+// FIREBASE CONFIG เนโฌโ€ เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ’เน€เธยเน€เธเธเน€เธเธ”เน€เธยเน€เธโ€”เน€เธเธ•เน€เธยเน€เธยเน€เธเธ•เน€เธยเน€เธโฌเน€เธเธเน€เธเธ—เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ
+// เนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขย
 var firebaseConfig = {
   apiKey: "AIzaSyAf4cljZCY0qU8PndVBviYdrsmgHpAG6Fs",
   authDomain: "factory-cedf6.firebaseapp.com",
@@ -677,22 +693,71 @@ var auth = null;
 var currentUser = null;
 var activePrintDoc = null;
 
+var USER_ACCESS = {
+  'preeda-cfp@chaveevangroup.com': {
+    name: 'Preeda CFP', role: 'sales',
+    permissions: { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
+  },
+  'chanapon_tpg@chaveevangroup.com': {
+    name: 'Chanapon TPG', role: 'sales',
+    permissions: { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:false, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
+  },
+  'rungnapha-tpg@chaveevangroup.com': {
+    name: 'Rungnapha TPG', role: 'sales',
+    permissions: { saleContract:false, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
+  },
+  'patima-cfp@chaveevangroup.com': {
+    name: 'Patima Rattanasuwan', role: 'sales',
+    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:false }
+  },
+  'thanakrit-cfp@chaveevangroup.com': {
+    name: 'Thanakrit CFP', role: 'sales',
+    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:false }
+  },
+  'suthima@chaveevangroup.com': {
+    name: 'Suthima Khampa', role: 'manager',
+    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:true }
+  },
+  'cfp@chaveevangroup.com': {
+    name: 'CFP', role: 'manager',
+    permissions: { saleContract:false, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:true }
+  }
+};
+
+function defaultPermissionsForRole(role) {
+  if (role === 'admin') {
+    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
+  }
+  if (role === 'manager') {
+    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
+  }
+  if (role === 'supervisor') {
+    return { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:true, approveSaleContract:false };
+  }
+  return { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:false, approveSaleOrder:false, orderSummary:false, approveSaleContract:false };
+}
+
 function inferUserProfile(email) {
   var normalized = (email || '').trim().toLowerCase();
+  var access = USER_ACCESS[normalized];
   var profile = {
     email: email || '',
-    name: normalized ? normalized.split('@')[0] : 'Sales User',
-    role: 'sales'
+    name: access ? access.name : (normalized ? normalized.split('@')[0] : 'Sales User'),
+    role: access ? access.role : 'sales',
+    permissions: access ? Object.assign({}, access.permissions) : defaultPermissionsForRole('sales')
   };
   if (normalized === 'sales@tpg.com') {
     profile.name = 'Sales Agent A';
     profile.role = 'sales';
+    profile.permissions = defaultPermissionsForRole('sales');
   } else if (normalized === 'supervisor@tpg.com') {
     profile.name = 'S. Kiat';
     profile.role = 'supervisor';
+    profile.permissions = defaultPermissionsForRole('supervisor');
   } else if (normalized === 'manager@tpg.com') {
     profile.name = 'Varavuth Khampa';
     profile.role = 'manager';
+    profile.permissions = defaultPermissionsForRole('manager');
   }
   return profile;
 }
@@ -704,7 +769,7 @@ try {
     db = firebase.firestore();
     auth = firebase.auth();
     useFirebase = true;
-    console.log('โ… Firebase initialized');
+    console.log('เนยโ€ฆ Firebase initialized');
     
     // Auto login check
     auth.onAuthStateChanged(async function(user) {
@@ -716,7 +781,8 @@ try {
           uid: user.uid,
           email: user.email,
           name: inferredProfile.name,
-          role: inferredProfile.role
+          role: inferredProfile.role,
+          permissions: Object.assign({}, inferredProfile.permissions)
         };
         try {
           var doc = await db.collection('users').doc(user.uid).get();
@@ -724,6 +790,7 @@ try {
             var data = doc.data();
             currentUser.name = data.name || currentUser.name;
             currentUser.role = data.role || currentUser.role;
+            currentUser.permissions = data.permissions || currentUser.permissions || defaultPermissionsForRole(currentUser.role);
           }
         } catch (err) {
           console.warn('Error fetching user profile:', err);
@@ -735,13 +802,13 @@ try {
       }
     });
   } else {
-    console.log('โน๏ธ Firebase not configured โ€” using localStorage fallback');
+    console.log('Firebase not configured.');
   }
 } catch(e) {
-  console.warn('โ ๏ธ Firebase init failed, using localStorage:', e);
+  console.warn('Firebase init failed:', e);
 }
 
-// โ•โ•โ• FIREBASE HELPER FUNCTIONS โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขย FIREBASE HELPER FUNCTIONS เนโ€ขยเนโ€ขยเนโ€ขย
 function fbSet(col, id, data) {
   if(!useFirebase || !db) return;
   try {
@@ -776,14 +843,14 @@ function fbBatchDel(col, ids) {
   } catch(e) { console.warn('fbBatchDel error:', e); }
 }
 
-// โ•โ•โ• COLLECTION MAPPING โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขย COLLECTION MAPPING เนโ€ขยเนโ€ขยเนโ€ขย
 var FB_COL = {
   buyers:'buyers', products:'products', contracts:'contracts',
   ports:'ports', payTerms:'payTerms', saleOrders:'saleOrders',
-  shipEntries:'shipEntries', categories:'categories'
+  shipEntries:'shipEntries', categories:'categories', incoterms:'incoterms'
 };
 
-// โ•โ•โ• DATA ARRAYS (in-memory) โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขย DATA ARRAYS (in-memory) เนโ€ขยเนโ€ขยเนโ€ขย
 var buyers = [];
 var products = [];
 var contracts = [];
@@ -792,6 +859,7 @@ var payTerms = [];
 var saleOrders = [];
 var shipEntries = [];
 var categories = [];
+var incoterms = [];
 var dashPage = 0;
 var dashPageSize = 50;
 var stPage = 0;
@@ -800,6 +868,8 @@ var stPageSize = 50;
 var DEF_PAY='By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)';
 var HDR_IMG='https://i.ibb.co/YB01Z6fZ/TPG-Logo-head.png';
 var FTR_IMG='https://i.ibb.co/twpPXTbQ/TPG-bottom.png';
+var STAMP_IMG='stamp%20in%20Sale.png';
+var DEFAULT_BUYER_REMARKS='1. This contract cannot be amended or terminated unless both seller and buyer agree in a written form\n2. 10% more or less allowed on actual loading quantity';
 var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function T(s){return s.replace(/</g,'<').replace(/>/g,'>');}
@@ -807,17 +877,17 @@ function moKey(s){if(!s)return'9999-99';var p=s.split(' ');var y=p[1]||'9999';va
 function sortMonths(arr){return arr.slice().sort(function(a,b){return moKey(a).localeCompare(moKey(b));});}
 function allShipMonths(){var s={};getLatestContracts().forEach(function(c){c.groups.forEach(function(g){if(g.shipmentMonth)s[g.shipmentMonth]=1;});});return sortMonths(Object.keys(s));}
 
-// โ•โ•โ• SAVE TO LOCALSTORAGE (cache) + FIREBASE โ•โ•โ•
+// Firebase save is handled by fbSet/fbBatchSet helpers.
 function sd(){}
 
-// โ•โ•โ• LOAD DATA FROM FIREBASE OR LOCALSTORAGE โ•โ•โ•
+// Load data from Firebase.
 async function loadData() {
   if(useFirebase) {
     try {
       var colMap = [
         ['buyers','buyers'], ['products','products'], ['contracts','contracts'],
         ['ports','ports'], ['payTerms','payTerms'], ['saleOrders','saleOrders'],
-        ['shipEntries','shipEntries'], ['categories','categories']
+        ['shipEntries','shipEntries'], ['categories','categories'], ['incoterms','incoterms']
       ];
       for(var i = 0; i < colMap.length; i++) {
         var col = colMap[i][0];
@@ -840,774 +910,9 @@ async function loadData() {
   }
 }
 
-// โ• โ• โ•  SEED DEFAULT DATA โ• โ• โ• 
-function seedDefaults() {}
+// Data is loaded from Firebase only. Master import is handled by setup_firebase.html.
 
-function confirmSeedMockData() {
-  showAppModal({
-    title: 'Seed Master Data',
-    message: 'This will replace master data from the Excel workbook: Buyers, Products, Categories, Ports, and Payment Terms. Contracts, Sale Orders, and Shipment Tracking will not be deleted. Proceed?',
-    confirmText: 'Seed Master',
-    cancelText: 'Cancel'
-  }).then(async function(ok) {
-    if (ok) {
-      document.getElementById('loading-overlay').classList.add('show');
-      document.getElementById('loading-text').textContent = 'Seeding master data...';
-      try {
-        await seedAllMasterData();
-        document.getElementById('loading-overlay').classList.remove('show');
-        showAppModal({
-          title: 'Success',
-          message: 'Master data seeded from TPG_SCSO_Workflow_v2026.xlsx successfully.',
-          confirmText: 'OK',
-          hideCancel: true,
-          type: 'success'
-        }).then(function() {
-          showPage('dashboard');
-        });
-      } catch (err) {
-        document.getElementById('loading-overlay').classList.remove('show');
-        alert('Seeding failed: ' + err.message);
-      }
-    }
-  });
-}
-
-async function seedAllMasterData() {
-  var seed = window.EXCEL_SEED_MASTER_DATA;
-  if (!seed) {
-    throw new Error('seed-master-data.js is not loaded.');
-  }
-
-  async function fbBatchSetAsync(col, items) {
-    if(!useFirebase || !db || !items.length) return;
-    var promises = [];
-    for(var i = 0; i < items.length; i += 400) {
-      var batch = db.batch();
-      items.slice(i, i + 400).forEach(function(item) {
-        batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
-      });
-      promises.push(batch.commit());
-    }
-    await Promise.all(promises);
-  }
-
-  async function fbBatchDeleteCollection(col) {
-    if(!useFirebase || !db) return;
-    var snap = await db.collection(col).get();
-    var docs = snap.docs;
-    for(var i = 0; i < docs.length; i += 400) {
-      var batch = db.batch();
-      docs.slice(i, i + 400).forEach(function(doc) { batch.delete(doc.ref); });
-      await batch.commit();
-    }
-  }
-
-  if (useFirebase && db) {
-    var masterCollections = ['buyers', 'products', 'ports', 'payTerms', 'categories'];
-    for (var m = 0; m < masterCollections.length; m++) {
-      await fbBatchDeleteCollection(masterCollections[m]);
-    }
-    await Promise.all([
-      fbBatchSetAsync('categories', seed.categories || []),
-      fbBatchSetAsync('buyers', seed.buyers || []),
-      fbBatchSetAsync('products', seed.products || []),
-      fbBatchSetAsync('ports', seed.ports || []),
-      fbBatchSetAsync('payTerms', seed.payTerms || [])
-    ]);
-  }
-
-  window.categories = (seed.categories || []).slice();
-  window.buyers = (seed.buyers || []).slice();
-  window.products = (seed.products || []).slice();
-  window.ports = (seed.ports || []).slice();
-  window.payTerms = (seed.payTerms || []).slice();
-
-  popCreateDDs();
-  popBuyerSel('pm-buyer');
-  popCatSel();
-  popProdCatFilter();
-  renderBuyerList();
-  renderProdList();
-  renderCatList();
-  renderPortList();
-  renderPTList();
-}
-
-async function seedAllMockData() {
-  // Helper for batch sets that returns a promise
-  async function fbBatchSetAsync(col, items) {
-    if(!useFirebase || !db || !items.length) return;
-    var promises = [];
-    for(var i = 0; i < items.length; i += 400) {
-      var batch = db.batch();
-      items.slice(i, i + 400).forEach(function(item) {
-        batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
-      });
-      promises.push(batch.commit());
-    }
-    await Promise.all(promises);
-  }
-
-  // 1. Delete all existing records from Firestore
-  if (useFirebase && db) {
-    var collections = ['buyers', 'products', 'contracts', 'ports', 'payTerms', 'saleOrders', 'shipEntries', 'categories'];
-    for (var k = 0; k < collections.length; k++) {
-      var col = collections[k];
-      var list = window[col] || [];
-      var ids = list.map(function(x) { return x.id; }).filter(Boolean);
-      if (ids.length > 0) {
-        for (var i = 0; i < ids.length; i += 400) {
-          var batch = db.batch();
-          ids.slice(i, i + 400).forEach(function(id) {
-            batch.delete(db.collection(col).doc(id));
-          });
-          await batch.commit();
-        }
-      }
-    }
-  }
-
-  // 2. Define mock lists
-  var seededCategories = [
-    { id: 'cat-breast', name: 'Chicken Breast', createdAt: new Date().toISOString() },
-    { id: 'cat-wing', name: 'Chicken Wings', createdAt: new Date().toISOString() },
-    { id: 'cat-skewer', name: 'Processed Food', createdAt: new Date().toISOString() }
-  ];
-
-  var seededBuyers = [
-    {
-      id: 'b-nhfoods',
-      name: 'NH Foods Japan Co., Ltd.',
-      contact: 'Mr. Takashi Tanaka',
-      billAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      addr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      shipTo: 'Yokohama Port Warehouse',
-      tel: '+81-3-1234-5678',
-      fax: '+81-3-1234-5679',
-      email: 'tanaka@nhfoods.co.jp',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'Requires high yield and premium packing'
-    },
-    {
-      id: 'b-eurofood',
-      name: 'EuroFood Distribution NV',
-      contact: 'Ms. Marie Dubois',
-      billAddr: 'Avenue Louise 326, Brussels, Belgium',
-      addr: 'Avenue Louise 326, Brussels, Belgium',
-      shipTo: 'Rotterdam Port Terminal 1',
-      tel: '+32-2-987-6543',
-      fax: '+32-2-987-6544',
-      email: 'm.dubois@eurofood.be',
-      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
-      remarks: 'Strict ETD schedule'
-    },
-    {
-      id: 'b-singfood',
-      name: 'Singapore Poultry Importers Pte Ltd',
-      contact: 'Mr. Lee Kian Seng',
-      billAddr: '50 Pasir Panjang Road, Singapore',
-      addr: '50 Pasir Panjang Road, Singapore',
-      shipTo: 'Singapore Jurong Cold Store',
-      tel: '+65-6789-0123',
-      fax: '+65-6789-0124',
-      email: 'lee.ks@singpoultry.com.sg',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'HALAL certificate required'
-    }
-  ];
-
-  var seededProducts = [
-    {
-      id: 'p-breast-bls',
-      code: 'BLS-01',
-      name: 'Frozen Boneless Skinless Breast',
-      cat: 'Chicken Breast',
-      packing: '10kg Carton (Inner PE Bag)',
-      ft40: 25,
-      ft20: 12,
-      raw: 'Breast',
-      yield: 75,
-      yield2: 68,
-      buyerId: ''
-    },
-    {
-      id: 'p-wing-mjw',
-      code: 'MJW-02',
-      name: 'Frozen Chicken Middle Joint Wing',
-      cat: 'Chicken Wings',
-      packing: '12kg Carton (Layer Pack)',
-      ft40: 24,
-      ft20: 11,
-      raw: 'Wing',
-      yield: 82,
-      yield2: 78,
-      buyerId: ''
-    },
-    {
-      id: 'p-proc-yaki',
-      code: 'YAK-03',
-      name: 'Charcoal Grilled Yakitori Skewer',
-      cat: 'Processed Food',
-      packing: '5kg Box (Vacuum Packed)',
-      ft40: 20,
-      ft20: 9,
-      raw: 'Leg',
-      yield: 65,
-      yield2: 60,
-      buyerId: ''
-    }
-  ];
-
-  var seededPorts = [
-    { id: 'port-yoko', name: 'Yokohama', country: 'Japan' },
-    { id: 'port-rot', name: 'Rotterdam', country: 'Netherlands' },
-    { id: 'port-sing', name: 'Singapore', country: 'Singapore' }
-  ];
-
-  var seededPayTerms = [
-    {
-      id: 'pt-default',
-      name: 'Default L/C',
-      type: 'lc',
-      text: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)'
-    },
-    {
-      id: 'pt-tt30',
-      name: 'TT 30 Days',
-      type: 'tt_full',
-      text: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.'
-    }
-  ];
-
-  var yr = new Date().getFullYear();
-  var seededContracts = [
-    {
-      id: 'c-mock-1',
-      date: (yr - 1) + '-11-15',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-nhfoods',
-      buyerName: 'NH Foods Japan Co., Ltd.',
-      buyerContact: 'Mr. Takashi Tanaka',
-      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerTel: '+81-3-1234-5678',
-      buyerFax: '+81-3-1234-5679',
-      shipToId: 'b-nhfoods',
-      shipToName: 'NH Foods Japan Co., Ltd.',
-      shipToAddr: 'Yokohama Port Warehouse',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'Requires high yield and premium packing',
-      payType: 'lc',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: (yr - 1) + '-11-16T09:00:00Z',
-      managerApproveDate: (yr - 1) + '-11-16T14:30:00Z',
-      savedAt: (yr - 1) + '-11-15T08:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26001',
-          shipmentDoc: 'Shipment during January ' + yr,
-          shipmentMonth: 'January ' + yr,
-          port: 'Yokohama',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '1850', total: '92500', incoterm: 'CIF', custPo: 'PO-10025' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '30', price: '2200', total: '66000', incoterm: 'CIF', custPo: 'PO-10026' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-2',
-      date: (yr - 1) + '-12-10',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-eurofood',
-      buyerName: 'EuroFood Distribution NV',
-      buyerContact: 'Ms. Marie Dubois',
-      buyerBillAddr: 'Avenue Louise 326, Brussels, Belgium',
-      buyerAddr: 'Avenue Louise 326, Brussels, Belgium',
-      buyerTel: '+32-2-987-6543',
-      buyerFax: '+32-2-987-6544',
-      shipToId: 'b-eurofood',
-      shipToName: 'EuroFood Distribution NV',
-      shipToAddr: 'Rotterdam Port Terminal 1',
-      incoterm: 'FOB',
-      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
-      remarks: 'Strict ETD schedule',
-      payType: 'tt_full',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: (yr - 1) + '-12-11T10:00:00Z',
-      managerApproveDate: (yr - 1) + '-12-11T16:00:00Z',
-      savedAt: (yr - 1) + '-12-10T11:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26002',
-          shipmentDoc: 'Shipment during February ' + yr,
-          shipmentMonth: 'February ' + yr,
-          port: 'Rotterdam',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '40', price: '1900', total: '76000', incoterm: 'FOB', custPo: 'PO-EU-987' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '25', price: '2180', total: '54500', incoterm: 'FOB', custPo: 'PO-EU-988' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-3',
-      date: yr + '-01-05',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-singfood',
-      buyerName: 'Singapore Poultry Importers Pte Ltd',
-      buyerContact: 'Mr. Lee Kian Seng',
-      buyerBillAddr: '50 Pasir Panjang Road, Singapore',
-      buyerAddr: '50 Pasir Panjang Road, Singapore',
-      buyerTel: '+65-6789-0123',
-      buyerFax: '+65-6789-0124',
-      shipToId: 'b-singfood',
-      shipToName: 'Singapore Poultry Importers Pte Ltd',
-      shipToAddr: 'Singapore Jurong Cold Store',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'HALAL certificate required',
-      payType: 'lc',
-      hasCom: true,
-      comType: 'pct',
-      comVal: 1.5,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: yr + '-01-06T09:00:00Z',
-      managerApproveDate: yr + '-01-06T15:00:00Z',
-      savedAt: yr + '-01-05T08:30:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26003',
-          shipmentDoc: 'Shipment during March ' + yr,
-          shipmentMonth: 'March ' + yr,
-          port: 'Singapore',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '60', price: '1880', total: '112800', incoterm: 'CIF', custPo: 'PO-SG-441' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '35', price: '2250', total: '78750', incoterm: 'CIF', custPo: 'PO-SG-442' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-4',
-      date: yr + '-02-12',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-nhfoods',
-      buyerName: 'NH Foods Japan Co., Ltd.',
-      buyerContact: 'Mr. Takashi Tanaka',
-      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerTel: '+81-3-1234-5678',
-      buyerFax: '+81-3-1234-5679',
-      shipToId: 'b-nhfoods',
-      shipToName: 'NH Foods Japan Co., Ltd.',
-      shipToAddr: 'Yokohama Port Warehouse',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'Requires high yield and premium packing',
-      payType: 'lc',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: yr + '-02-13T09:00:00Z',
-      managerApproveDate: yr + '-02-13T14:00:00Z',
-      savedAt: yr + '-02-12T10:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26004',
-          shipmentDoc: 'Shipment during April ' + yr,
-          shipmentMonth: 'April ' + yr,
-          port: 'Yokohama',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '1920', total: '96000', incoterm: 'CIF', custPo: 'PO-10048' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '30', price: '2300', total: '69000', incoterm: 'CIF', custPo: 'PO-10049' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-5',
-      date: yr + '-03-15',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-eurofood',
-      buyerName: 'EuroFood Distribution NV',
-      buyerContact: 'Ms. Marie Dubois',
-      buyerBillAddr: 'Avenue Louise 326, Brussels, Belgium',
-      buyerAddr: 'Avenue Louise 326, Brussels, Belgium',
-      buyerTel: '+32-2-987-6543',
-      buyerFax: '+32-2-987-6544',
-      shipToId: 'b-eurofood',
-      shipToName: 'EuroFood Distribution NV',
-      shipToAddr: 'Rotterdam Port Terminal 1',
-      incoterm: 'FOB',
-      payment: 'By Telegraphic Transfer (T/T) within 30 days after the date of Bill of Lading.',
-      remarks: 'Strict ETD schedule',
-      payType: 'tt_full',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: yr + '-03-16T10:00:00Z',
-      managerApproveDate: yr + '-03-16T16:00:00Z',
-      savedAt: yr + '-03-15T11:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26005',
-          shipmentDoc: 'Shipment during May ' + yr,
-          shipmentMonth: 'May ' + yr,
-          port: 'Rotterdam',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '45', price: '1950', total: '87750', incoterm: 'FOB', custPo: 'PO-EU-1052' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '28', price: '2350', total: '65800', incoterm: 'FOB', custPo: 'PO-EU-1053' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-6',
-      date: yr + '-04-10',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-nhfoods',
-      buyerName: 'NH Foods Japan Co., Ltd.',
-      buyerContact: 'Mr. Takashi Tanaka',
-      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerTel: '+81-3-1234-5678',
-      buyerFax: '+81-3-1234-5679',
-      shipToId: 'b-nhfoods',
-      shipToName: 'NH Foods Japan Co., Ltd.',
-      shipToAddr: 'Yokohama Port Warehouse',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'Requires high yield and premium packing',
-      payType: 'lc',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'approved',
-      supervisorApproveDate: yr + '-04-11T09:00:00Z',
-      managerApproveDate: yr + '-04-11T14:00:00Z',
-      savedAt: yr + '-04-10T10:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26006',
-          shipmentDoc: 'Shipment during June ' + yr,
-          shipmentMonth: 'June ' + yr,
-          port: 'Yokohama',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '55', price: '1990', total: '109450', incoterm: 'CIF', custPo: 'PO-10089' },
-            { no: 2, productId: 'p-wing-mjw', productName: 'Frozen Chicken Middle Joint Wing', productCode: 'MJW-02', cat: 'Chicken Wings', rawMat: 'Wing', yieldPct: 82, yield2Pct: 78, packing: '12kg Carton (Layer Pack)', qty: '32', price: '2400', total: '76800', incoterm: 'CIF', custPo: 'PO-10090' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-7',
-      date: yr + '-05-20',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-nhfoods',
-      buyerName: 'NH Foods Japan Co., Ltd.',
-      buyerContact: 'Mr. Takashi Tanaka',
-      buyerBillAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerAddr: '4-1-3 Kyobashi, Chuo-ku, Tokyo, Japan',
-      buyerTel: '+81-3-1234-5678',
-      buyerFax: '+81-3-1234-5679',
-      shipToId: 'b-nhfoods',
-      shipToName: 'NH Foods Japan Co., Ltd.',
-      shipToAddr: 'Yokohama Port Warehouse',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'Requires high yield and premium packing',
-      payType: 'lc',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'pending_supervisor',
-      supervisorApproveDate: null,
-      managerApproveDate: null,
-      savedAt: yr + '-05-20T10:00:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26007',
-          shipmentDoc: 'Shipment during July ' + yr,
-          shipmentMonth: 'July ' + yr,
-          port: 'Yokohama',
-          rows: [
-            { no: 1, productId: 'p-breast-bls', productName: 'Frozen Boneless Skinless Breast', productCode: 'BLS-01', cat: 'Chicken Breast', rawMat: 'Breast', yieldPct: 75, yield2Pct: 68, packing: '10kg Carton (Inner PE Bag)', qty: '50', price: '2020', total: '101000', incoterm: 'CIF', custPo: 'PO-10112' }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'c-mock-8',
-      date: yr + '-05-22',
-      formNo: 'FM-MK-03/04 Rev.01',
-      buyerId: 'b-singfood',
-      buyerName: 'Singapore Poultry Importers Pte Ltd',
-      buyerContact: 'Mr. Lee Kian Seng',
-      buyerBillAddr: '50 Pasir Panjang Road, Singapore',
-      buyerAddr: '50 Pasir Panjang Road, Singapore',
-      buyerTel: '+65-6789-0123',
-      buyerFax: '+65-6789-0124',
-      shipToId: 'b-singfood',
-      shipToName: 'Singapore Poultry Importers Pte Ltd',
-      shipToAddr: 'Singapore Jurong Cold Store',
-      incoterm: 'CIF',
-      payment: 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)',
-      remarks: 'HALAL certificate required',
-      payType: 'lc',
-      hasCom: false,
-      comType: 'pct',
-      comVal: 0,
-      status: 'active',
-      version: 1,
-      originalId: null,
-      approvalStatus: 'pending_manager',
-      supervisorApproveDate: yr + '-05-23T09:00:00Z',
-      managerApproveDate: null,
-      savedAt: yr + '-05-22T08:30:00Z',
-      groups: [
-        {
-          scNo: 'TPG-26008',
-          shipmentDoc: 'Shipment during July ' + yr,
-          shipmentMonth: 'July ' + yr,
-          port: 'Singapore',
-          rows: [
-            { no: 1, productId: 'p-proc-yaki', productName: 'Charcoal Grilled Yakitori Skewer', productCode: 'YAK-03', cat: 'Processed Food', rawMat: 'Leg', yieldPct: 65, yield2Pct: 60, packing: '5kg Box (Vacuum Packed)', qty: '20', price: '3250', total: '65000', incoterm: 'CIF', custPo: 'PO-SG-502' }
-          ]
-        }
-      ]
-    }
-  ];
-
-  var seededSaleOrders = [];
-  seededContracts.forEach(function(c) {
-    c.groups.forEach(function(g) {
-      if(!g.scNo) return;
-      var newSO = {
-        id: 'so-' + g.scNo + '-v1',
-        soNo: g.scNo,
-        version: 1,
-        contractId: c.id,
-        date: c.date,
-        buyerName: c.buyerName,
-        buyerId: c.buyerId,
-        shipmentDoc: g.shipmentDoc,
-        shipmentMonth: g.shipmentMonth,
-        port: g.port,
-        rows: g.rows.map(function(r, i) {
-          return {
-            item: i + 1,
-            orderNo: r.custPo,
-            pCode: r.productCode,
-            description: r.productName,
-            packing: r.packing,
-            qty: r.qty,
-            shipment: g.shipmentDoc,
-            port: g.port
-          };
-        }),
-        status: (c.approvalStatus === 'approved') ? 'acknowledged' : 'draft',
-        remarks: '',
-        sentAt: (c.approvalStatus === 'approved') ? c.supervisorApproveDate : null,
-        acknowledgedAt: (c.approvalStatus === 'approved') ? c.managerApproveDate : null,
-        supersededAt: null
-      };
-      seededSaleOrders.push(newSO);
-    });
-  });
-
-  var seededShipEntries = [
-    {
-      id: 'sh-mock-1',
-      invNo: '001/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-001',
-      scNo: 'TPG-26001',
-      customer: 'NH Foods Japan Co., Ltd.',
-      port: 'Yokohama',
-      finishDate: yr + '-01-08',
-      lab: yr + '-01-06',
-      cy: yr + '-01-04',
-      returnDate: yr + '-01-03',
-      closing: yr + '-01-05 23:59',
-      etd: yr + '-01-10',
-      eta: yr + '-01-25',
-      agent: 'ONE',
-      vessel: 'Ocean Express v.012W',
-      freight: '2500',
-      containerNo: 'TGBU1234567',
-      note: 'Seeded Jan Yokohama shipment',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'sh-mock-2',
-      invNo: '002/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-002',
-      scNo: 'TPG-26002',
-      customer: 'EuroFood Distribution NV',
-      port: 'Rotterdam',
-      finishDate: yr + '-02-09',
-      lab: yr + '-02-07',
-      cy: yr + '-02-05',
-      returnDate: yr + '-02-04',
-      closing: yr + '-02-06 23:59',
-      etd: yr + '-02-12',
-      eta: yr + '-03-08',
-      agent: 'Maersk',
-      vessel: 'Maersk Rotterdam v.204S',
-      freight: '4500',
-      containerNo: 'MSKU7654321',
-      note: 'Seeded Feb Rotterdam shipment',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'sh-mock-3',
-      invNo: '003/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-003',
-      scNo: 'TPG-26003',
-      customer: 'Singapore Poultry Importers Pte Ltd',
-      port: 'Singapore',
-      finishDate: yr + '-03-05',
-      lab: yr + '-03-03',
-      cy: yr + '-03-02',
-      returnDate: yr + '-03-01',
-      closing: yr + '-03-04 23:59',
-      etd: yr + '-03-08',
-      eta: yr + '-03-15',
-      agent: 'ONE',
-      vessel: 'Ocean Singapore v.088E',
-      freight: '1500',
-      containerNo: 'ONEU9988776',
-      note: 'Seeded Mar Singapore shipment',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'sh-mock-4',
-      invNo: '004/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-004',
-      scNo: 'TPG-26004',
-      customer: 'NH Foods Japan Co., Ltd.',
-      port: 'Yokohama',
-      finishDate: yr + '-04-10',
-      lab: yr + '-04-08',
-      cy: yr + '-04-06',
-      returnDate: yr + '-04-05',
-      closing: yr + '-04-07 23:59',
-      etd: yr + '-04-14',
-      eta: yr + '-04-29',
-      agent: 'Cosco',
-      vessel: 'Cosco Hamburg v.055N',
-      freight: '2600',
-      containerNo: 'COSU8877665',
-      note: 'Seeded Apr Yokohama shipment',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'sh-mock-5',
-      invNo: '005/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-005',
-      scNo: 'TPG-26005',
-      customer: 'EuroFood Distribution NV',
-      port: 'Rotterdam',
-      finishDate: yr + '-05-12',
-      lab: yr + '-05-10',
-      cy: yr + '-05-08',
-      returnDate: yr + '-05-07',
-      closing: yr + '-05-09 23:59',
-      etd: yr + '-05-18',
-      eta: yr + '-06-12',
-      agent: 'Maersk',
-      vessel: 'Maersk Antwerp v.311N',
-      freight: '4700',
-      containerNo: 'MSKU4455667',
-      note: 'Seeded May Rotterdam shipment',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'sh-mock-6',
-      invNo: '006/' + String(yr).slice(-2),
-      ref: 'REF-' + yr + '-006',
-      scNo: 'TPG-26006',
-      customer: 'NH Foods Japan Co., Ltd.',
-      port: 'Yokohama',
-      finishDate: yr + '-05-28',
-      lab: yr + '-05-26',
-      cy: yr + '-05-24',
-      returnDate: yr + '-05-23',
-      closing: yr + '-05-25 23:59',
-      etd: yr + '-06-02',
-      eta: yr + '-06-17',
-      agent: 'ONE',
-      vessel: 'Ocean Tokyo v.044W',
-      freight: '2550',
-      containerNo: 'TGBU9876543',
-      note: 'Seeded Jun Yokohama shipment',
-      createdAt: new Date().toISOString()
-    }
-  ];
-
-  if (useFirebase && db) {
-    await Promise.all([
-      fbBatchSetAsync('categories', seededCategories),
-      fbBatchSetAsync('buyers', seededBuyers),
-      fbBatchSetAsync('products', seededProducts),
-      fbBatchSetAsync('ports', seededPorts),
-      fbBatchSetAsync('payTerms', seededPayTerms),
-      fbBatchSetAsync('contracts', seededContracts),
-      fbBatchSetAsync('saleOrders', seededSaleOrders),
-      fbBatchSetAsync('shipEntries', seededShipEntries)
-    ]);
-  }
-
-  window.categories = seededCategories;
-  window.buyers = seededBuyers;
-  window.products = seededProducts;
-  window.ports = seededPorts;
-  window.payTerms = seededPayTerms;
-  window.contracts = seededContracts;
-  window.saleOrders = seededSaleOrders;
-  window.shipEntries = seededShipEntries;
-
-  popCreateDDs();
-  updateApprovalBadge();
-  if (typeof initShipTrack === 'function') {
-    try {
-      initShipTrack();
-    } catch(e) { console.warn(e); }
-  }
-}
-
-// โ• โ• โ•  APP INITIALIZATION โ• โ• โ• 
+// เนโ€ข เนโ€ข เนโ€ข  APP INITIALIZATION เนโ€ข เนโ€ข เนโ€ข 
 async function initApp() {
   document.getElementById('loading-overlay').classList.add('show');
   document.getElementById('loading-text').textContent = 'Loading data...';
@@ -1615,10 +920,14 @@ async function initApp() {
     await loadData();
     // Initialize UI
     popCreateDDs();
+    popIncotermSel();
     setToday();
     addGroup();
     updateApprovalBadge();
-    document.getElementById('main-app').style.display = 'flex';
+    applyAccessControl();
+    document.getElementById('main-app').style.display = isMobileLayout() ? 'block' : 'flex';
+    var firstPage = firstAllowedPage();
+    showPage(firstPage, document.querySelector('.nav-item[data-page="'+firstPage+'"]'));
   } catch(e) {
     console.error('Init error:', e);
     alert('Error connecting to Firebase: ' + e.message);
@@ -1626,7 +935,7 @@ async function initApp() {
   document.getElementById('loading-overlay').classList.remove('show');
 }
 
-// โ•โ•โ• LOGIN & LOGOUT HANDLERS โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขย LOGIN & LOGOUT HANDLERS เนโ€ขยเนโ€ขยเนโ€ขย
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var pass = document.getElementById('login-pass').value;
@@ -1647,21 +956,7 @@ async function doLogin() {
       return;
     }
   } else {
-    // Fallback Mock Login
-    var inferredProfile = inferUserProfile(email || 'sales@tpg.com');
-    currentUser = {
-      uid: 'mock-uid',
-      email: inferredProfile.email,
-      name: inferredProfile.name,
-      role: inferredProfile.role
-    };
-    
-    // Update sidebar user display
-    document.getElementById('sb-user-name').textContent = currentUser.name;
-    document.getElementById('sb-user-email').textContent = currentUser.email;
-    
-    document.getElementById('login-overlay').style.display = 'none';
-    await initApp();
+    alert('Firebase is not connected. Please configure Firebase before logging in.');
   }
 }
 
@@ -1674,14 +969,59 @@ async function doLogout() {
     }
   }
   currentUser = null;
+  closeMobileSidebar();
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('login-overlay').style.display = 'flex';
 }
 
-// (localStorage migration removed)
+function isMobileLayout() {
+  return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+}
+function toggleMobileSidebar() {
+  document.body.classList.toggle('sidebar-open');
+}
+function closeMobileSidebar() {
+  document.body.classList.remove('sidebar-open');
+}
+function hasPerm(key) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  if (key === 'create') return hasPerm('saleContract') || hasPerm('saleOrder') || hasPerm('approveSaleOrder');
+  var perms = currentUser.permissions || defaultPermissionsForRole(currentUser.role);
+  return !!perms[key];
+}
+function firstAllowedPage() {
+  if (hasPerm('saleContract') || hasPerm('saleOrder') || hasPerm('approveSaleOrder')) return 'create';
+  if (hasPerm('orderSummary')) return 'dashboard';
+  if (hasPerm('approveSaleContract')) return 'approval';
+  if (hasPerm('shipmentTracking')) return 'shiptrack';
+  if (hasPerm('rawMaterial')) return 'rawmat';
+  return 'dashboard';
+}
+function applyAccessControl() {
+  document.querySelectorAll('.nav-item[data-perm]').forEach(function(item) {
+    item.style.display = hasPerm(item.dataset.perm) ? '' : 'none';
+  });
+  var contractBtn = document.getElementById('tab-contract-btn');
+  var soBtn = document.getElementById('tab-so-btn');
+  if (contractBtn) contractBtn.style.display = hasPerm('saleContract') ? '' : 'none';
+  if (soBtn) soBtn.style.display = (hasPerm('saleOrder') || hasPerm('approveSaleOrder')) ? '' : 'none';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeMobileSidebar();
+});
+window.addEventListener('resize', function() {
+  var app = document.getElementById('main-app');
+  if (app && app.style.display !== 'none') {
+    app.style.display = isMobileLayout() ? 'block' : 'flex';
+  }
+  if (!isMobileLayout()) closeMobileSidebar();
+});
 function switchCreateTab(tabName) {
+  if (tabName === 'contract' && !hasPerm('saleContract')) tabName = 'so';
+  if (tabName === 'so' && !(hasPerm('saleOrder') || hasPerm('approveSaleOrder'))) tabName = 'contract';
   var cBtn = document.getElementById('tab-contract-btn');
   var sBtn = document.getElementById('tab-so-btn');
   var cContent = document.getElementById('tab-contract-content');
@@ -1705,6 +1045,11 @@ function showPage(p,el){
     switchCreateTab('so');
     return;
   }
+  if (p === 'create' && !hasPerm('create')) p = firstAllowedPage();
+  if (p === 'dashboard' && !hasPerm('orderSummary')) { alert('You do not have access to Order Summary.'); return; }
+  if (p === 'approval' && !hasPerm('approveSaleContract')) { alert('You do not have access to approve Sales Contracts.'); return; }
+  if (p === 'shiptrack' && !hasPerm('shipmentTracking')) { alert('You do not have access to Shipment Tracking.'); return; }
+  if (p === 'rawmat' && !hasPerm('rawMaterial')) { alert('You do not have access to Raw Material Plan.'); return; }
   document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active');});
   document.querySelectorAll('.nav-item').forEach(function(x){x.classList.remove('active');});
   document.getElementById('page-'+p).classList.add('active');
@@ -1713,11 +1058,13 @@ function showPage(p,el){
   if(p==='buyers'){renderBuyerList();popPtSel('bm-ptsel');}
   if(p==='products'){renderProdList();popBuyerSel('pm-buyer');popCatSel();popProdCatFilter();renderCatList();}
   if(p==='ports')renderPortList();
+  if(p==='incoterms')renderIncotermList();
   if(p==='payments')renderPTList();
   if(p==='shiptrack')initShipTrack();
   if(p==='rawmat')initRawMat();
-  if(p==='create'){popCreateDDs();setToday();switchCreateTab('contract');}
+  if(p==='create'){popCreateDDs();popIncotermSel();setToday();switchCreateTab(hasPerm('saleContract')?'contract':'so');}
   if(p==='approval')renderApprovalPage();
+  if(isMobileLayout())closeMobileSidebar();
 }
 var gc=0;
 function setToday(){if(!document.getElementById('editing-id').value)document.getElementById('f-date').value=new Date().toISOString().split('T')[0];}
@@ -1731,6 +1078,19 @@ function popCreateDDs(){
   st.innerHTML='<option value="">Same as Buyer</option>';
   buyers.forEach(function(b){var o=document.createElement('option');o.value=b.id;o.textContent=b.name;st.appendChild(o);});
   if(stv)st.value=stv;
+  popIncotermSel();
+}
+function getIncotermList(){
+  var list=incoterms&&incoterms.length?incoterms:[{id:'inco-cif',code:'CIF'},{id:'inco-cfr',code:'CFR'},{id:'inco-fob',code:'FOB'},{id:'inco-exworks',code:'EX WORKS'},{id:'inco-bytruck',code:'BY TRUCK'}];
+  return list.slice().sort(function(a,b){return (a.code||a.name||'').localeCompare(b.code||b.name||'');});
+}
+function popIncotermSel(){
+  var sel=document.getElementById('f-incoterm');if(!sel)return;
+  var cv=sel.value||'CFR';
+  sel.innerHTML='<option value="">Select</option>';
+  getIncotermList().forEach(function(x){var code=x.code||x.name||'';if(!code)return;var o=document.createElement('option');o.value=code;o.textContent=code;sel.appendChild(o);});
+  if(cv)sel.value=cv;
+  if(!sel.value&&sel.options.length>1)sel.value=sel.options[1].value;
 }
 popCreateDDs();
 function onShipToChange(){
@@ -1747,7 +1107,7 @@ function onBuyerChange(){
     box.style.display='block';
     box.innerHTML='<b>'+b.name+'</b>'+(b.contact?' - '+b.contact:'')+'<br>'+b.addr.substring(0,80)+'...';
     document.getElementById('f-payment').value=b.payment||'';
-    document.getElementById('f-remarks').value=b.remarks||'';
+    document.getElementById('f-remarks').value=b.remarks||DEFAULT_BUYER_REMARKS;
     document.querySelectorAll('.prod-sel').forEach(function(sel){var cv=sel.value;fillPS(sel,bid);sel.value=cv;});
   }else box.style.display='none';
 }
@@ -2048,6 +1408,15 @@ function searchSCList(){
 }
 function fd(d){if(!d)return'';var dt=new Date(d);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}
 function fdt(d){if(!d)return'';var dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'});}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function formatDocRemarks(text){
+  return String(text||'').split(/\n+/).map(function(line){
+    var clean=line.trim();
+    if(!clean)return'';
+    var red=/contract cannot be amended|10% more or less/i.test(clean);
+    return '<div style="'+(red?'color:#c62828;font-weight:700':'')+'">'+escHtml(clean)+'</div>';
+  }).join('');
+}
 function getDocRows(data){
   var rows=[];var grandTotal=0;var docNo=0;
   data.groups.forEach(function(g){
@@ -2121,7 +1490,7 @@ function buildDocFrame(data,mode,rowsHtml,opts){
   if(opts.showTerms!==false){
     html+='<div class="doc-footer-fields">';
     if(data.payment)html+='<div class="doc-footer-row"><span class="doc-footer-label">Payment:</span><span>'+data.payment+'</span></div>';
-    if(data.remarks)html+='<div class="doc-footer-row"><span class="doc-footer-label">Remarks:</span><span>'+data.remarks+'</span></div>';
+    if(data.remarks)html+='<div class="doc-footer-row"><span class="doc-footer-label">Remarks:</span><span>'+formatDocRemarks(data.remarks)+'</span></div>';
     html+='</div>';
   }
   var supervisorSig = '';
@@ -2270,7 +1639,7 @@ function popDashFilters(){
   bfEl.innerHTML='<option value="">All Buyers</option>';
   buyers.forEach(function(b){var o=document.createElement('option');o.value=b.id;o.textContent=b.name;bfEl.appendChild(o);});bfEl.value=bv;
 }
-// โ”€โ”€ FIXED renderDash: no rowspan, each product row is fully self-contained โ”€โ”€
+// เนโ€โฌเนโ€โฌ FIXED renderDash: no rowspan, each product row is fully self-contained เนโ€โฌเนโ€โฌ
 function renderDash(keepPage){
   if (!keepPage) {
     dashPage = 0;
@@ -2373,7 +1742,7 @@ function renderDash(keepPage){
       var sepStyle=isFirst?'border-top:2px solid #c5d8ec':'';
       rows+='<tr style="'+sepStyle+'">';
       if(isExcept){
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">โ‘</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">เนยโ€</span>')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
         rows+='<td style="text-align:right">'+r.qty+'</td>';
@@ -2392,7 +1761,7 @@ function renderDash(keepPage){
         rows+='<td style="text-align:center;font-size:10px">'+(isFirst?verCell:'')+'</td>';
         rows+='<td>'+(isFirst?actCell:'')+'</td>';
       } else {
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">โ‘</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">เนยโ€</span>')+'</td>';
         rows+='<td style="'+dimStyle+'">'+(isFirst?'<span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
@@ -2502,8 +1871,8 @@ function renderPriceTrend(){
     if(prevRecord){
       var prevAvg=prevRecord.prices.reduce(function(s,v){return s+v;},0)/prevRecord.prices.length;
       var diff=avg-prevAvg;var pct=(diff/prevAvg)*100;
-      if(diff>0)changeHtml='<span style="color:#c62828;font-weight:bold">▲ '+pct.toFixed(1)+'% (+$'+diff.toFixed(0)+')</span>';
-      else if(diff<0)changeHtml='<span style="color:#2e7d32;font-weight:bold">▼ '+Math.abs(pct).toFixed(1)+'% (-$'+Math.abs(diff).toFixed(0)+')</span>';
+      if(diff>0)changeHtml='<span style="color:#c62828;font-weight:bold">Up '+pct.toFixed(1)+'% (+$'+diff.toFixed(0)+')</span>';
+      else if(diff<0)changeHtml='<span style="color:#2e7d32;font-weight:bold">Down '+Math.abs(pct).toFixed(1)+'% (-$'+Math.abs(diff).toFixed(0)+')</span>';
       else changeHtml='<span style="color:#666">0.0%</span>';
     }
     html+='<tr><td>'+r.month+'</td><td>'+r.product+'</td><td>'+r.buyer+'</td>';
@@ -2572,9 +1941,9 @@ function importPasteData(type){
   var area=document.getElementById(type==='buyers'?'buyer-paste-area':'prod-paste-area');
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var text=area.value.trim();
-  if(!text){statusEl.textContent='โ เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅ';statusEl.style.color='#c62828';return;}
+  if(!text){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…';statusEl.style.color='#c62828';return;}
   var rows=parseTSV(text);
-  if(rows.length<2){statusEl.textContent='โ เธเนเธญเธกเธนเธฅเนเธกเนเธ–เธนเธเธ•เนเธญเธ';statusEl.style.color='#c62828';return;}
+  if(rows.length<2){statusEl.textContent='เนยย เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธเธเน€เธยเน€เธโ€“เน€เธเธเน€เธยเน€เธโ€ขเน€เธยเน€เธเธเน€เธย';statusEl.style.color='#c62828';return;}
   if(type==='buyers'){
     // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
     var imported=[];
@@ -2589,14 +1958,14 @@ function importPasteData(type){
         fax:'',payment:PAY_TERMS[ptIdx]||PAY_TERMS[1],remarks:'',shipTo:''
       });
     }
-    if(!imported.length){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ buyer';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ… buyer';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = buyers.map(function(b){ return b.id; });
       fbBatchDel('buyers', oldIds);
     }
     buyers=imported;sd();renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
     fbBatchSet('buyers', buyers);
-    statusEl.textContent='โ… Import '+imported.length+' buyers เน€เธฃเธตเธขเธเธฃเนเธญเธข';
+    statusEl.textContent='เนยโ€ฆ Import '+imported.length+' buyers เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
     statusEl.style.color='#2e7d32';
     area.value='';
   } else {
@@ -2617,14 +1986,14 @@ function importPasteData(type){
         buyerId:b?b.id:''
       });
     }
-    if(!imported.length){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ product';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ… product';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = products.map(function(p){ return p.id; });
       fbBatchDel('products', oldIds);
     }
     products=imported;sd();renderProdList();popCatSel();popProdCatFilter();
     fbBatchSet('products', products);
-    statusEl.textContent='โ… Import '+imported.length+' products เน€เธฃเธตเธขเธเธฃเนเธญเธข';
+    statusEl.textContent='เนยโ€ฆ Import '+imported.length+' products เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
     statusEl.style.color='#2e7d32';
     area.value='';
   }
@@ -2634,10 +2003,10 @@ function importFromSheet(type){
   var gid=type==='buyers'?BUYER_GID:PROD_GID;
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+gid;
-  statusEl.textContent='โณ เธเธณเธฅเธฑเธเนเธซเธฅเธ”...';statusEl.style.color='#e65100';
+  statusEl.textContent='เนยเธ“ เน€เธยเน€เธเธ“เน€เธเธ…เน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธเธ…เน€เธโ€...';statusEl.style.color='#e65100';
   fetch(url).then(function(r){return r.text();}).then(function(csv){
     var rows=parseCSV(csv);
-    if(rows.length<2){statusEl.textContent='โ เนเธกเนเธเธเธเนเธญเธกเธนเธฅ';return;}
+    if(rows.length<2){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…';return;}
     if(type==='buyers'){
       // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
       var imported=[];
@@ -2666,7 +2035,7 @@ function importFromSheet(type){
       buyers=imported;sd();
       renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
       fbBatchSet('buyers', buyers);
-      statusEl.textContent='โ… Import '+imported.length+' buyers เน€เธฃเธตเธขเธเธฃเนเธญเธข';
+      statusEl.textContent='เนยโ€ฆ Import '+imported.length+' buyers เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
       statusEl.style.color='#2e7d32';
     } else {
       // cols: #,P-CODE,CUSTOMER,DESCRIPTION,PACKING SIZE,Standard Quantity,Measurements,PMK,Category,Yield,Raw Meat,Yield,Raw Meat Use
@@ -2699,12 +2068,12 @@ function importFromSheet(type){
       products=imported;sd();
       renderProdList();popCatSel();popProdCatFilter();
       fbBatchSet('products', products);
-      statusEl.textContent='โ… Import '+imported.length+' products เน€เธฃเธตเธขเธเธฃเนเธญเธข';
+      statusEl.textContent='เนยโ€ฆ Import '+imported.length+' products เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
       statusEl.style.color='#2e7d32';
     }
     setTimeout(function(){statusEl.textContent='';},5000);
   }).catch(function(e){
-    statusEl.textContent='โ Error: '+e.message+' (เธ•เธฃเธงเธเธชเธญเธเธงเนเธฒ Sheet เน€เธเนเธ Public)';
+    statusEl.textContent='เนยย Error: '+e.message+' (เน€เธโ€ขเน€เธเธเน€เธเธเน€เธยเน€เธเธเน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธ’ Sheet เน€เธโฌเน€เธยเน€เธยเน€เธย Public)';
     statusEl.style.color='#c62828';
   });
 }
@@ -2732,12 +2101,13 @@ function onPtSel(){var pt=payTerms.find(function(p){return p.id===document.getEl
 function saveBuyer(){
   var id=document.getElementById('bm-id').value;
   var obj={id:id||'b'+Date.now(),name:document.getElementById('bm-name').value.trim(),contact:document.getElementById('bm-contact').value.trim(),billAddr:document.getElementById('bm-billaddr').value.trim(),addr:document.getElementById('bm-addr').value.trim(),shipTo:document.getElementById('bm-shipto').value.trim(),tel:document.getElementById('bm-tel').value.trim(),fax:document.getElementById('bm-fax').value.trim(),email:document.getElementById('bm-email').value.trim(),payment:document.getElementById('bm-payment').value.trim(),remarks:document.getElementById('bm-remarks').value.trim()};
+  if(!obj.remarks)obj.remarks=DEFAULT_BUYER_REMARKS;
   if(!obj.name){alert('Please enter company name.');return;}
   if(id){var i=buyers.findIndex(function(b){return b.id===id;});if(i>-1)buyers[i]=obj;}else buyers.push(obj);
   fbSet('buyers', obj.id, obj);
   sd();renderBuyerList();clearBF();popCreateDDs();
 }
-function editB(id){var b=buyers.find(function(x){return x.id===id;});if(!b)return;document.getElementById('bm-id').value=b.id;document.getElementById('bm-name').value=b.name;document.getElementById('bm-contact').value=b.contact||'';document.getElementById('bm-billaddr').value=b.billAddr||'';document.getElementById('bm-addr').value=b.addr;document.getElementById('bm-shipto').value=b.shipTo||'';document.getElementById('bm-tel').value=b.tel;document.getElementById('bm-fax').value=b.fax||'';document.getElementById('bm-email').value=b.email||'';document.getElementById('bm-payment').value=b.payment;document.getElementById('bm-remarks').value=b.remarks||'';}
+function editB(id){var b=buyers.find(function(x){return x.id===id;});if(!b)return;document.getElementById('bm-id').value=b.id;document.getElementById('bm-name').value=b.name;document.getElementById('bm-contact').value=b.contact||'';document.getElementById('bm-billaddr').value=b.billAddr||'';document.getElementById('bm-addr').value=b.addr;document.getElementById('bm-shipto').value=b.shipTo||'';document.getElementById('bm-tel').value=b.tel;document.getElementById('bm-fax').value=b.fax||'';document.getElementById('bm-email').value=b.email||'';document.getElementById('bm-payment').value=b.payment;document.getElementById('bm-remarks').value=b.remarks||DEFAULT_BUYER_REMARKS;}
 function delB(id){if(confirm('Delete buyer?')){buyers=buyers.filter(function(b){return b.id!==id;});fbDel('buyers', id);sd();renderBuyerList();}}
 function clearBF(){['bm-id','bm-name','bm-contact','bm-billaddr','bm-addr','bm-shipto','bm-tel','bm-fax','bm-email','bm-payment','bm-remarks'].forEach(function(i){var el=document.getElementById(i);if(el)el.value='';});}
 function getUniqueCategories(){var s={};products.forEach(function(p){if(p.cat)s[p.cat]=1;});return Object.keys(s).sort();}
@@ -2873,6 +2243,28 @@ function savePort(){var id=document.getElementById('port-id').value;var name=doc
 function editPort(id){var p=ports.find(function(x){return x.id===id;});if(!p)return;document.getElementById('port-id').value=p.id;document.getElementById('port-name').value=p.name;document.getElementById('port-country').value=p.country||'';}
 function delPort(id){if(confirm('Delete port?')){ports=ports.filter(function(p){return p.id!==id;});fbDel('ports', id);sd();renderPortList();}}
 function clearPortF(){document.getElementById('port-id').value='';document.getElementById('port-name').value='';document.getElementById('port-country').value='';}
+function renderIncotermList(){
+  if(!incoterms.length){document.getElementById('incoterm-list').innerHTML='<div style="text-align:center;padding:16px;color:#aaa">No incoterms.</div>';return;}
+  var html='';
+  incoterms.slice().sort(function(a,b){return(a.code||'').localeCompare(b.code||'');}).forEach(function(x){
+    html+='<div class="mitem"><div><b style="font-size:11px">'+(x.code||'')+'</b>';
+    if(x.desc)html+='<div style="font-size:10px;color:#888">'+x.desc+'</div>';
+    html+='</div><div style="display:flex;gap:3px"><button class="btn btn-outline btn-xs" onclick="editIncoterm(\''+x.id+'\')">Edit</button><button class="btn btn-danger btn-xs" onclick="delIncoterm(\''+x.id+'\')">X</button></div></div>';
+  });
+  document.getElementById('incoterm-list').innerHTML=html;
+}
+function saveIncoterm(){
+  var id=document.getElementById('inco-id').value;
+  var code=document.getElementById('inco-code').value.trim().toUpperCase();
+  var desc=document.getElementById('inco-desc').value.trim();
+  if(!code){alert('Enter incoterm.');return;}
+  var obj={id:id||'inco-'+code.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),code:code,desc:desc};
+  if(id){var i=incoterms.findIndex(function(x){return x.id===id;});if(i>-1)incoterms[i]=obj;}else incoterms.push(obj);
+  fbSet('incoterms', obj.id, obj);sd();renderIncotermList();popIncotermSel();clearIncotermF();
+}
+function editIncoterm(id){var x=incoterms.find(function(v){return v.id===id;});if(!x)return;document.getElementById('inco-id').value=x.id;document.getElementById('inco-code').value=x.code||'';document.getElementById('inco-desc').value=x.desc||'';}
+function delIncoterm(id){if(confirm('Delete incoterm?')){incoterms=incoterms.filter(function(x){return x.id!==id;});fbDel('incoterms', id);sd();renderIncotermList();popIncotermSel();}}
+function clearIncotermF(){document.getElementById('inco-id').value='';document.getElementById('inco-code').value='';document.getElementById('inco-desc').value='';}
 function renderSOList(){
   var sf=document.getElementById('so-fil-status').value||'';
   var qf=(document.getElementById('so-fil-q').value||'').toLowerCase();
@@ -3187,9 +2579,9 @@ function renderFreightTrend(){
       var diff = avg - prevAvg;
       var pct = (diff / prevAvg) * 100;
       if (diff > 0) {
-        changeHtml = '<span style="color:#c62828;font-weight:bold">โ–ฒ ' + pct.toFixed(1) + '% (+$' + diff.toFixed(0) + ')</span>';
+        changeHtml = '<span style="color:#c62828;font-weight:bold">Up ' + pct.toFixed(1) + '% (+$' + diff.toFixed(0) + ')</span>';
       } else if (diff < 0) {
-        changeHtml = '<span style="color:#2e7d32;font-weight:bold">โ–ผ ' + Math.abs(pct).toFixed(1) + '% (-$' + Math.abs(diff).toFixed(0) + ')</span>';
+        changeHtml = '<span style="color:#2e7d32;font-weight:bold">Down ' + Math.abs(pct).toFixed(1) + '% (-$' + Math.abs(diff).toFixed(0) + ')</span>';
       } else {
         changeHtml = '<span style="color:#666">0.0%</span>';
       }
@@ -3343,7 +2735,7 @@ function renderRawMat(){
   }
   
   var warnEl=document.getElementById('rm-yield-warn');
-  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - เธเธฃเธญเธ Yield Category & Yield Raw Material เนเธ Product Master';}
+  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - เน€เธยเน€เธเธเน€เธเธเน€เธย Yield Category & Yield Raw Material เน€เธยเน€เธย Product Master';}
   else warnEl.style.display='none';
   
   var months=sortMonths(Object.keys(byMonth));
@@ -3431,7 +2823,7 @@ function showAppModal(opts) {
     var confirmBtn = document.getElementById('app-modal-confirm');
     var type = opts.type || 'confirm';
     icon.className = 'app-modal-icon ' + type;
-    icon.textContent = type === 'success' ? 'โ“' : '?';
+    icon.textContent = type === 'success' ? 'เนยโ€' : '?';
     title.textContent = opts.title || 'Confirm Action';
     message.textContent = opts.message || '';
     input.style.display = opts.input ? 'block' : 'none';
@@ -3503,17 +2895,14 @@ function showAppPrompt(title, message, opts) {
   });
 }
 
-// โ•โ•โ• APPROVAL WORKFLOW HELPERS โ•โ•โ•
+// เนโ€ขยเนโ€ขยเนโ€ขย APPROVAL WORKFLOW HELPERS เนโ€ขยเนโ€ขยเนโ€ขย
 function getCurrentApprovalRole() {
   if (currentUser && currentUser.role) return currentUser.role;
-  var selector = document.getElementById('mock-role-selector');
-  return selector ? selector.value : 'sales';
+  return 'sales';
 }
 
 function syncApprovalRoleUI() {
   var role = getCurrentApprovalRole();
-  var selector = document.getElementById('mock-role-selector');
-  if (selector) selector.value = role;
   var userLabel = document.getElementById('approval-user-label');
   if (userLabel) {
     userLabel.textContent = currentUser ? ((currentUser.name || currentUser.email) + ' (' + currentUser.email + ')') : 'Not logged in';
