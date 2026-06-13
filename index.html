@@ -79,7 +79,12 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .rm-month-card{background:#fff;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:10px;overflow:hidden}
 .rm-month-header{background:#1a3a5c;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700}
 @media print{body *{visibility:hidden}#print-area,#print-area *{visibility:visible}#print-area{display:block!important;position:fixed;top:0;left:0;width:100%}.no-print{display:none!important}}
-.doc{width:740px;margin:0 auto;font-family:Arial,sans-serif;font-size:10.5px;color:#000;line-height:1.45;background:#fff}
+@page { margin: 0; }
+@media print {
+  .doc-footer-img { position: fixed; bottom: 15mm; left: 50%; transform: translateX(-50%); width: 90%; }
+  .doc { page-break-after: always; padding-bottom: 50mm; }
+}
+.doc{width:740px;margin:0 auto;font-family:Arial,sans-serif;font-size:10.5px;color:#000;line-height:1.45;background:#fff;padding-top:15mm;padding-left:10mm;padding-right:10mm;}
 .doc-header-img{width:100%;display:block}
 .doc-footer-img{width:100%;display:block;margin-top:10px}
 .doc-content{padding:8px 28px 14px}
@@ -109,11 +114,11 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .doc.pdf-page .doc-table tr{page-break-inside:avoid;break-inside:avoid}
 .doc.pdf-page .doc-footer-img{margin-top:auto}
 .doc-stamp-img{position:absolute;right:34px;bottom:28px;width:96px;transform:rotate(-4deg);opacity:.92;z-index:20}
-/* FIX: dash table เนโฌโ€ flatten rowspan so columns stay aligned */
+/* FIX: dash table -> flatten rowspan so columns stay aligned */
 #dash-body tr td {vertical-align:middle;}
 #dash-body tr.group-sep td {border-top:2px solid #c5d8ec;}
 #dash-body tr.subtotal-row td {background:#f0f4f8;font-weight:700;border-top:2px solid #c5d8ec;border-bottom:3px solid #c5d8ec;}
-/* เนโ€ขยเนโ€ขยเนโ€ขย LOGIN & LOADING เนโ€ขยเนโ€ขยเนโ€ขย */
+/* ••••••••••••••••••••• LOGIN & LOADING ••••••••••••••••••••• */
 .login-overlay{display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);z-index:9999;align-items:center;justify-content:center}
 .login-box{background:#fff;border-radius:12px;padding:36px 40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}
 .login-box h2{color:#1a3a5c;margin-bottom:4px;font-size:20px}
@@ -171,7 +176,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-<!-- เนโ€ขยเนโ€ขยเนโ€ขย LOGIN OVERLAY เนโ€ขยเนโ€ขยเนโ€ขย -->
+<!-- ••••••••••••••••••••• LOGIN OVERLAY ••••••••••••••••••••• -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
     <h2>Thai Poultry Group</h2>
@@ -182,7 +187,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="login-footer">TPG Sales Contract System v2.0</div>
   </div>
 </div>
-<!-- เนโ€ขยเนโ€ขยเนโ€ขย LOADING OVERLAY เนโ€ขยเนโ€ขยเนโ€ขย -->
+<!-- ••••••••••••••••••••• LOADING OVERLAY ••••••••••••••••••••• -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-text">Loading data...</div>
@@ -206,7 +211,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div class="app" style="display:none" id="main-app">
 <div class="mobile-topbar">
-  <button class="mobile-menu-btn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu">โก</button>
+  <button class="mobile-menu-btn" type="button" onclick="toggleMobileSidebar()" aria-label="Open menu">≡</button>
   <div class="mobile-topbar-title"><b>Thai Poultry Group</b><span>Sales Contract System</span></div>
 </div>
 <div class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
@@ -252,6 +257,10 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="fg" style="max-width:130px"><label>Issue Date</label><input type="date" id="f-date"></div>
     <div class="fg" style="max-width:170px"><label>Form No.</label><input type="text" value="FM-MK-03/04 Rev.01" readonly></div>
     <div class="fg"><label>Buyer</label><select id="f-buyer" onchange="onBuyerChange()"><option value="">Select Buyer</option></select></div>
+    <div style="display:flex;align-items:center;gap:6px;padding-top:16px">
+      <input type="checkbox" id="f-show-contact" checked style="width:14px;height:14px">
+      <label for="f-show-contact" style="font-size:11px;color:#1a3a5c;font-weight:700;cursor:pointer">Show Contact</label>
+    </div>
     <div class="fg" style="max-width:130px"><label>Incoterm</label><select id="f-incoterm"><option value="">Select</option></select></div>
   </div>
   <div id="buyer-info" style="display:none;background:#f0f4f8;border-radius:4px;padding:6px 10px;font-size:11px;color:#444;margin-bottom:4px;line-height:1.6"></div>
@@ -269,7 +278,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="fg"><label>Remarks</label><textarea id="f-remarks" rows="2"></textarea></div>
   </div>
   <div class="form-row" style="align-items:center">
-    <div class="fg" style="max-width:150px"><label>Payment Type</label><select id="f-pay-type"><option value="">Select</option><option value="lc">L/C</option><option value="tt_full">TT Full</option><option value="tt_deposit">TT Deposit</option></select></div>
+    <div class="fg" style="max-width:150px"><label>Payment Type</label><select id="f-pay-type" onchange="onPayTypeChange()"><option value="">Select</option><option value="lc">L/C</option><option value="tt_full">TT Full</option><option value="tt_deposit">TT Deposit</option></select></div>
     <div style="display:flex;align-items:center;gap:6px;padding-top:16px">
       <input type="checkbox" id="f-has-com" onchange="onComChange()" style="width:14px;height:14px">
       <label for="f-has-com" style="font-size:11px;color:#e65100;font-weight:700;cursor:pointer">Has Commission</label>
@@ -335,15 +344,13 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
       <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="fil-show-cancelled" onchange="renderDash()"> Show Cancelled</label>
     </div>
     <div class="stat-cards" id="os-stat-cards"></div>
-    <div style="overflow-x:auto">
       <table class="dt"><thead><tr>
-        <th>SC No.</th><th>Buyer</th><th>Cust. PO</th><th>Product</th>
+        <th>SC No.</th><th>INV No.</th><th>Buyer</th><th>Cust. PO</th><th>Product</th>
         <th>Qty MT</th><th>Price USD</th><th>Total USD</th>
-        <th>Incoterm</th><th>Shipment</th><th>Month</th><th>Port</th>
-        <th>ETD</th><th>ETA</th><th>Vessel</th><th>INV No.</th>
+        <th>Incoterm</th><th>Shipment</th><th>Port</th>
+        <th>ETD</th><th>ETA</th><th>shipping line</th>
         <th>Payment</th><th>Commission</th><th>Version</th><th>Actions</th>
       </tr></thead><tbody id="dash-body"></tbody></table>
-    </div>
     <div id="dash-pagination" class="no-print" style="margin-top:10px;display:flex;justify-content:center;align-items:center;gap:12px">
       <button class="btn btn-outline btn-xs" id="dash-prev-btn" onclick="changeDashPage(-1)">Previous</button>
       <span id="dash-page-info" style="font-size:11px">Page 1</span>
@@ -562,7 +569,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
         <div class="fg" style="max-width:120px"><label>Ref.</label><input type="text" id="st-ref"></div>
         <div class="fg"><label>Sale Contract No.</label><select id="st-sc" onchange="onSTScChange()"><option value="">Select SC</option></select></div>
         <div class="fg"><label>Customer</label><input type="text" id="st-customer"></div>
-        <div class="fg"><label>Port</label><input type="text" id="st-port"></div>
+        <div class="fg"><label>Port</label><select id="st-port"><option value="">Select Port</option></select></div>
       </div>
       <div class="form-row">
         <div class="fg" style="max-width:120px"><label>Finish Date</label><input type="date" id="st-finish"></div>
@@ -576,8 +583,8 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
         <div class="fg" style="max-width:120px"><label>ETD</label><input type="date" id="st-etd"></div>
         <div class="fg" style="max-width:120px"><label>ETA</label><input type="date" id="st-eta"></div>
         <div class="fg"><label>Agent</label><input type="text" id="st-agent"></div>
-        <div class="fg"><label>Vessel</label><input type="text" id="st-vessel"></div>
-        <div class="fg" style="max-width:130px"><label>Freight (USD)</label><input type="number" id="st-freight" step="0.01"></div>
+        <div class="fg"><label>shipping line</label><input type="text" id="st-vessel"></div>
+        <div class="fg" style="max-width:130px"><label>Freight price (USD)</label><input type="number" id="st-freight" step="0.01"></div>
       </div>
       <div class="form-row">
         <div class="fg"><label>Container No.</label><input type="text" id="st-container"></div>
@@ -674,9 +681,9 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 </div>
 <div id="print-area" style="display:none"></div>
 <script type="text/javascript">
-// เนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขย
-// FIREBASE CONFIG เนโฌโ€ เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธเธ’เน€เธยเน€เธเธเน€เธเธ”เน€เธยเน€เธโ€”เน€เธเธ•เน€เธยเน€เธยเน€เธเธ•เน€เธยเน€เธโฌเน€เธเธเน€เธเธ—เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ
-// เนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
+// FIREBASE CONFIG - ใช้สำหรับเชื่อมต่อเพื่อให้พร้อมใช้งาน
+// =========================================================================================================
 var firebaseConfig = {
   apiKey: "AIzaSyAf4cljZCY0qU8PndVBviYdrsmgHpAG6Fs",
   authDomain: "factory-cedf6.firebaseapp.com",
@@ -732,7 +739,7 @@ function defaultPermissionsForRole(role) {
     return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
   }
   if (role === 'supervisor') {
-    return { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:true, approveSaleContract:false };
+    return { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
   }
   return { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:false, approveSaleOrder:false, orderSummary:false, approveSaleContract:false };
 }
@@ -769,7 +776,7 @@ try {
     db = firebase.firestore();
     auth = firebase.auth();
     useFirebase = true;
-    console.log('เนยโ€ฆ Firebase initialized');
+    console.log('✓ Firebase initialized');
     
     // Auto login check
     auth.onAuthStateChanged(async function(user) {
@@ -808,7 +815,7 @@ try {
   console.warn('Firebase init failed:', e);
 }
 
-// เนโ€ขยเนโ€ขยเนโ€ขย FIREBASE HELPER FUNCTIONS เนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
 function fbSet(col, id, data) {
   if(!useFirebase || !db) return;
   try {
@@ -843,14 +850,14 @@ function fbBatchDel(col, ids) {
   } catch(e) { console.warn('fbBatchDel error:', e); }
 }
 
-// เนโ€ขยเนโ€ขยเนโ€ขย COLLECTION MAPPING เนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
 var FB_COL = {
   buyers:'buyers', products:'products', contracts:'contracts',
   ports:'ports', payTerms:'payTerms', saleOrders:'saleOrders',
   shipEntries:'shipEntries', categories:'categories', incoterms:'incoterms'
 };
 
-// เนโ€ขยเนโ€ขยเนโ€ขย DATA ARRAYS (in-memory) เนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
 var buyers = [];
 var products = [];
 var contracts = [];
@@ -869,7 +876,7 @@ var DEF_PAY='By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd
 var HDR_IMG='https://i.ibb.co/YB01Z6fZ/TPG-Logo-head.png';
 var FTR_IMG='https://i.ibb.co/twpPXTbQ/TPG-bottom.png';
 var STAMP_IMG='stamp%20in%20Sale.png';
-var DEFAULT_BUYER_REMARKS='1. This contract cannot be amended or terminated unless both seller and buyer agree in a written form\n2. 10% more or less allowed on actual loading quantity';
+var DEFAULT_BUYER_REMARKS='1. This contract cannot be amend or terminate unless both seller and buyer agree in a written form\n2. 10% more or less allow on actual loading quantity';
 var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function T(s){return s.replace(/</g,'<').replace(/>/g,'>');}
@@ -912,7 +919,7 @@ async function loadData() {
 
 // Data is loaded from Firebase only. Master import is handled by setup_firebase.html.
 
-// เนโ€ข เนโ€ข เนโ€ข  APP INITIALIZATION เนโ€ข เนโ€ข เนโ€ข 
+// =========================================================================================================
 async function initApp() {
   document.getElementById('loading-overlay').classList.add('show');
   document.getElementById('loading-text').textContent = 'Loading data...';
@@ -935,7 +942,7 @@ async function initApp() {
   document.getElementById('loading-overlay').classList.remove('show');
 }
 
-// เนโ€ขยเนโ€ขยเนโ€ขย LOGIN & LOGOUT HANDLERS เนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var pass = document.getElementById('login-pass').value;
@@ -1182,7 +1189,7 @@ function addGroup(){
 }
 function addRow(gid){
   var tb=document.getElementById('tb-'+gid);
-  if(tb.rows.length>=8){alert('Max 8 products per group.');return;}
+  if(tb.rows.length>=15){alert('Max 15 products per group.');return;}
   var bid=document.getElementById('f-buyer').value;
   var inco=document.getElementById('f-incoterm').value;
   var tr=document.createElement('tr');
@@ -1413,16 +1420,16 @@ function formatDocRemarks(text){
   return String(text||'').split(/\n+/).map(function(line){
     var clean=line.trim();
     if(!clean)return'';
-    var red=/contract cannot be amended|10% more or less/i.test(clean);
-    return '<div style="'+(red?'color:#c62828;font-weight:700':'')+'">'+escHtml(clean)+'</div>';
+    return '<div style="color:#000">'+escHtml(clean)+'</div>';
   }).join('');
 }
 function getDocRows(data){
-  var rows=[];var grandTotal=0;var docNo=0;
+  var rows=[];var grandTotal=0;var totalQty=0;var docNo=0;
   data.groups.forEach(function(g){
     docNo++;
     g.rows.forEach(function(r,ri){
       grandTotal+=parseFloat(r.total)||0;
+      totalQty+=parseFloat(r.qty)||0;
       var row='<tr>';
       row+='<td>'+(ri===0?docNo:'')+'</td><td>'+(ri===0?g.scNo:'')+'</td>';
       row+='<td class="tl">'+r.productName+'</td><td class="tl">'+r.packing+'</td>';
@@ -1435,19 +1442,21 @@ function getDocRows(data){
       rows.push(row);
     });
   });
-  return {rows:rows,grandTotal:grandTotal};
+  return {rows:rows,grandTotal:grandTotal,totalQty:totalQty};
 }
 
-function buildDocTable(rowsHtml, grandTotal, includeGrandTotal) {
+function buildDocTable(rowsHtml, grandTotal, totalQty, includeGrandTotal) {
   var html='<table class="doc-table"><thead><tr>';
   html+='<th>No.</th><th>Sales Contract</th><th>Product</th><th>Packing</th>';
   html+='<th>Qty (MT)</th><th>Price (USD/MT)</th><th>Total (USD)</th>';
   html+='<th>Shipment</th><th>PORT</th><th>Customer PO</th>';
   html+='</tr></thead><tbody>'+rowsHtml+'</tbody>';
-  if(includeGrandTotal&&grandTotal){
+  if(includeGrandTotal && (grandTotal || totalQty)){
     html+='<tfoot><tr>';
-    html+='<td colspan="6" style="text-align:right;font-weight:700;border:1px solid #000;padding:3px 5px">Grand Total</td>';
-    html+='<td style="font-weight:700;border:1px solid #000;padding:3px 5px">USD '+grandTotal.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
+    html+='<td colspan="4" style="text-align:right;font-weight:700;border:1px solid #000;padding:3px 5px">Grand Total</td>';
+    html+='<td style="font-weight:700;border:1px solid #000;padding:3px 5px">'+(totalQty ? totalQty.toFixed(3) : '')+'</td>';
+    html+='<td></td>';
+    html+='<td style="font-weight:700;border:1px solid #000;padding:3px 5px">'+(grandTotal ? 'USD '+grandTotal.toLocaleString('en-US',{minimumFractionDigits:2}) : '')+'</td>';
     html+='<td colspan="3" style="border:1px solid #000"></td>';
     html+='</tr></tfoot>';
   }
@@ -1468,7 +1477,8 @@ function buildDocFrame(data,mode,rowsHtml,opts){
   var html='<div class="'+cls+'">';
   html+='<img class="doc-header-img" src="'+HDR_IMG+'" alt="TPG Header">';
   html+='<div class="doc-content">';
-  html+='<div class="doc-meta"><span>'+data.formNo+'</span><span>'+fd(data.date)+'</span></div>';
+  var revLabel = (data.version && data.version > 1) ? ' <span style="color:#c62828">REV.' + (data.version - 1) + '</span>' : '';
+  html+='<div class="doc-meta"><span>'+data.formNo + revLabel + '</span><span>'+fd(data.date)+'</span></div>';
   html+='<div class="doc-title-row">';
   html+='<div style="min-width:110px"></div>';
   html+='<div class="doc-title">Sales Contract</div>';
@@ -1480,25 +1490,20 @@ function buildDocFrame(data,mode,rowsHtml,opts){
     html+='<span>Thai Poultry Group Co., LTD<br>209/55 Moo 3, Bung, Sriracha, Chonburi 20230<br>Tel: +66-038-340-222 Fax: +66-038-340-123</span></div>';
     html+='<br><div class="doc-party"><span class="doc-party-label">Buyer:</span><span>';
     html+='<b>'+data.buyerName+'</b>';
-    if(data.buyerContact)html+='<br>'+data.buyerContact;
+    if(data.showContact !== false && data.buyerContact)html+='<br>'+data.buyerContact;
     if(data.buyerBillAddr)html+='<br>'+data.buyerBillAddr;
     html+='<br>'+data.buyerAddr.replace(/\n/g,'<br>');
     if(data.buyerTel)html+='<br>Tel: '+data.buyerTel+(data.buyerFax?' Fax: '+data.buyerFax:'');
     html+='</span></div>'+shipToBlock+'</div>';
   }
-  html+=buildDocTable(rowsHtml, opts.grandTotal || 0, opts.showGrandTotal);
+  html+=buildDocTable(rowsHtml, opts.grandTotal || 0, opts.totalQty || 0, opts.showGrandTotal);
   if(opts.showTerms!==false){
     html+='<div class="doc-footer-fields">';
     if(data.payment)html+='<div class="doc-footer-row"><span class="doc-footer-label">Payment:</span><span>'+data.payment+'</span></div>';
     if(data.remarks)html+='<div class="doc-footer-row"><span class="doc-footer-label">Remarks:</span><span>'+formatDocRemarks(data.remarks)+'</span></div>';
     html+='</div>';
   }
-  var supervisorSig = '';
   var managerSig = '';
-  if (data.approvalStatus === 'approved' || data.approvalStatus === 'pending_manager') {
-    supervisorSig = '<div style="position:absolute;margin-top:-22px;margin-left:45px;border:2px dashed #2e7d32;color:#2e7d32;font-size:8px;padding:2px 5px;transform:rotate(-6deg);font-weight:bold;background:rgba(255,255,255,0.95);border-radius:4px;text-align:center;pointer-events:none;z-index:100;line-height:1.2;font-family:Arial,sans-serif;">' +
-                    'TPG SUPERVISOR<br><span style="font-size:10px">APPROVED</span><br>' + (data.supervisorApproveDate || '') + '</div>';
-  }
   if (data.approvalStatus === 'approved') {
     managerSig = '<div style="position:absolute;margin-top:-22px;margin-left:45px;border:2px dashed #0d47a1;color:#0d47a1;font-size:8px;padding:2px 5px;transform:rotate(-8deg);font-weight:bold;background:rgba(255,255,255,0.95);border-radius:4px;text-align:center;pointer-events:none;z-index:100;line-height:1.2;font-family:Arial,sans-serif;">' +
                  'TPG MANAGER<br><span style="font-size:10px">APPROVED</span><br>' + (data.managerApproveDate || '') + '</div>';
@@ -1506,8 +1511,11 @@ function buildDocFrame(data,mode,rowsHtml,opts){
   
   if(opts.showSignature!==false){
     html+='<div class="doc-sig" style="position:relative;display:flex;justify-content:space-between;margin-top:20px;padding:0 10px">';
+    if (data.approvalStatus === 'approved') {
+      html+='<img class="doc-stamp-img" src="'+STAMP_IMG+'" alt="TPG Stamp">';
+    }
     html+='<div class="doc-sig-block" style="text-align:center;width:210px"><div>'+data.buyerName+'</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Buyer</div></div>';
-    html+='<div class="doc-sig-block" style="text-align:center;width:210px;position:relative">'+supervisorSig+'<div>TPG Supervisor</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Reviewed By</div></div>';
+    html+='<div class="doc-sig-block" style="text-align:center;width:210px;position:relative"><div>Reviewed By</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Reviewed By</div></div>';
     html+='<div class="doc-sig-block" style="text-align:center;width:210px;position:relative">'+managerSig+'<div>Thai Poultry Group Co., LTD</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Seller<br>Varavuth Khampa<br>Managing Director</div></div>';
     html+='</div>';
   }
@@ -1519,7 +1527,7 @@ function buildDocFrame(data,mode,rowsHtml,opts){
 function buildDoc(data,mode){
   var docData=getDocRows(data);
   if(mode!=='pdf'){
-    return buildDocFrame(data,mode,docData.rows.join(''),{grandTotal:docData.grandTotal,showGrandTotal:true});
+    return buildDocFrame(data,mode,docData.rows.join(''),{grandTotal:docData.grandTotal,totalQty:docData.totalQty,showGrandTotal:true});
   }
   var pages=[];var idx=0;var totalRows=docData.rows.length;
   var firstPageRows=10;var middlePageRows=18;var lastPageRows=8;
@@ -1545,7 +1553,8 @@ function buildDoc(data,mode){
       showTerms:isLast,
       showSignature:isLast,
       showGrandTotal:isLast,
-      grandTotal:docData.grandTotal
+      grandTotal:docData.grandTotal,
+      totalQty:docData.totalQty
     });
   });
   return html;
@@ -1639,7 +1648,7 @@ function popDashFilters(){
   bfEl.innerHTML='<option value="">All Buyers</option>';
   buyers.forEach(function(b){var o=document.createElement('option');o.value=b.id;o.textContent=b.name;bfEl.appendChild(o);});bfEl.value=bv;
 }
-// เนโ€โฌเนโ€โฌ FIXED renderDash: no rowspan, each product row is fully self-contained เนโ€โฌเนโ€โฌ
+// =========================================================================================================
 function renderDash(keepPage){
   if (!keepPage) {
     dashPage = 0;
@@ -1742,7 +1751,8 @@ function renderDash(keepPage){
       var sepStyle=isFirst?'border-top:2px solid #c5d8ec':'';
       rows+='<tr style="'+sepStyle+'">';
       if(isExcept){
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">เนยโ€</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">↳</span>')+'</td>';
+        rows+='<td style="font-size:10px">'+(isFirst?invCell:'')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
         rows+='<td style="text-align:right">'+r.qty+'</td>';
@@ -1750,18 +1760,17 @@ function renderDash(keepPage){
         rows+='<td style="text-align:right">'+(r.total?'$'+Number(r.total).toLocaleString():'-')+'</td>';
         rows+='<td>'+(isFirst?incoCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?shipCell:'')+'</td>';
-        rows+='<td>'+(isFirst?moCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?portCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?etdCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?etaCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?vesselCell:'')+'</td>';
-        rows+='<td style="font-size:10px">'+(isFirst?invCell:'')+'</td>';
         rows+='<td>'+(isFirst?payCell:'')+'</td>';
         rows+='<td>'+(isFirst?comCell:'')+'</td>';
         rows+='<td style="text-align:center;font-size:10px">'+(isFirst?verCell:'')+'</td>';
         rows+='<td>'+(isFirst?actCell:'')+'</td>';
       } else {
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">เนยโ€</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">↳</span>')+'</td>';
+        rows+='<td style="font-size:10px">'+(isFirst?invCell:'')+'</td>';
         rows+='<td style="'+dimStyle+'">'+(isFirst?'<span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
@@ -1770,12 +1779,10 @@ function renderDash(keepPage){
         rows+='<td style="text-align:right">'+(r.total?'$'+Number(r.total).toLocaleString():'-')+'</td>';
         rows+='<td>'+(isFirst?incoCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?shipCell:'')+'</td>';
-        rows+='<td>'+(isFirst?moCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?portCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?etdCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?etaCell:'')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?vesselCell:'')+'</td>';
-        rows+='<td style="font-size:10px">'+(isFirst?invCell:'')+'</td>';
         rows+='<td>'+(isFirst?payCell:'')+'</td>';
         rows+='<td>'+(isFirst?comCell:'')+'</td>';
         rows+='<td style="text-align:center;font-size:10px">'+(isFirst?verCell:'')+'</td>';
@@ -1786,15 +1793,15 @@ function renderDash(keepPage){
     var isExcept = (g.scNo === '555/26');
     rows+='<tr class="subtotal-row">';
     if (isExcept) {
-      rows+='<td colspan="2" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
+      rows+='<td colspan="3" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
       rows+='<td style="text-align:right">'+tQty.toFixed(3)+'</td><td></td>';
       rows+='<td style="text-align:right;color:#1a3a5c">$'+tVal.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
-      rows+='<td colspan="14"></td>';
+      rows+='<td colspan="11"></td>';
     } else {
-      rows+='<td colspan="4" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
+      rows+='<td colspan="5" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
       rows+='<td style="text-align:right">'+tQty.toFixed(3)+'</td><td></td>';
       rows+='<td style="text-align:right;color:#1a3a5c">$'+tVal.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
-      rows+='<td colspan="12"></td>';
+      rows+='<td colspan="10"></td>';
     }
     rows+='</tr>';
   });
@@ -1941,9 +1948,9 @@ function importPasteData(type){
   var area=document.getElementById(type==='buyers'?'buyer-paste-area':'prod-paste-area');
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var text=area.value.trim();
-  if(!text){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ•เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…';statusEl.style.color='#c62828';return;}
+  if(!text){statusEl.textContent='❌ ไม่พบข้อมูล';statusEl.style.color='#c62828';return;}
   var rows=parseTSV(text);
-  if(rows.length<2){statusEl.textContent='เนยย เน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…เน€เธยเน€เธเธเน€เธยเน€เธโ€“เน€เธเธเน€เธยเน€เธโ€ขเน€เธยเน€เธเธเน€เธย';statusEl.style.color='#c62828';return;}
+  if(rows.length<2){statusEl.textContent='❌ ข้อมูลไม่ถูกต้อง';statusEl.style.color='#c62828';return;}
   if(type==='buyers'){
     // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
     var imported=[];
@@ -1958,14 +1965,14 @@ function importPasteData(type){
         fax:'',payment:PAY_TERMS[ptIdx]||PAY_TERMS[1],remarks:'',shipTo:''
       });
     }
-    if(!imported.length){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ… buyer';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='❌ ไม่พบข้อมูล buyer';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = buyers.map(function(b){ return b.id; });
       fbBatchDel('buyers', oldIds);
     }
     buyers=imported;sd();renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
     fbBatchSet('buyers', buyers);
-    statusEl.textContent='เนยโ€ฆ Import '+imported.length+' buyers เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
+      statusEl.textContent='✓ Import '+imported.length+' buyers เรียบร้อย';
     statusEl.style.color='#2e7d32';
     area.value='';
   } else {
@@ -1986,14 +1993,14 @@ function importPasteData(type){
         buyerId:b?b.id:''
       });
     }
-    if(!imported.length){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ… product';statusEl.style.color='#c62828';return;}
+    if(!imported.length){statusEl.textContent='❌ ไม่พบข้อมูล product';statusEl.style.color='#c62828';return;}
     if(useFirebase && db) {
       var oldIds = products.map(function(p){ return p.id; });
       fbBatchDel('products', oldIds);
     }
     products=imported;sd();renderProdList();popCatSel();popProdCatFilter();
     fbBatchSet('products', products);
-    statusEl.textContent='เนยโ€ฆ Import '+imported.length+' products เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
+      statusEl.textContent='✓ Import '+imported.length+' products เรียบร้อย';
     statusEl.style.color='#2e7d32';
     area.value='';
   }
@@ -2003,10 +2010,10 @@ function importFromSheet(type){
   var gid=type==='buyers'?BUYER_GID:PROD_GID;
   var statusEl=document.getElementById(type==='buyers'?'sync-buyer-status':'sync-prod-status');
   var url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+gid;
-  statusEl.textContent='เนยเธ“ เน€เธยเน€เธเธ“เน€เธเธ…เน€เธเธ‘เน€เธยเน€เธยเน€เธเธเน€เธเธ…เน€เธโ€...';statusEl.style.color='#e65100';
+  statusEl.textContent='กำลังนำเข้าข้อมูล...';statusEl.style.color='#e65100';
   fetch(url).then(function(r){return r.text();}).then(function(csv){
     var rows=parseCSV(csv);
-    if(rows.length<2){statusEl.textContent='เนยย เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธยเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธเธ…';return;}
+    if(rows.length<2){statusEl.textContent='❌ ไม่พบข้อมูล';return;}
     if(type==='buyers'){
       // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
       var imported=[];
@@ -2035,7 +2042,7 @@ function importFromSheet(type){
       buyers=imported;sd();
       renderBuyerList();popCreateDDs();popBuyerSel('pm-buyer');
       fbBatchSet('buyers', buyers);
-      statusEl.textContent='เนยโ€ฆ Import '+imported.length+' buyers เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
+      statusEl.textContent='✓ Import '+imported.length+' buyers เรียบร้อย';
       statusEl.style.color='#2e7d32';
     } else {
       // cols: #,P-CODE,CUSTOMER,DESCRIPTION,PACKING SIZE,Standard Quantity,Measurements,PMK,Category,Yield,Raw Meat,Yield,Raw Meat Use
@@ -2068,12 +2075,12 @@ function importFromSheet(type){
       products=imported;sd();
       renderProdList();popCatSel();popProdCatFilter();
       fbBatchSet('products', products);
-      statusEl.textContent='เนยโ€ฆ Import '+imported.length+' products เน€เธโฌเน€เธเธเน€เธเธ•เน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธเน€เธเธ';
+      statusEl.textContent='✓ Import '+imported.length+' products เรียบร้อย';
       statusEl.style.color='#2e7d32';
     }
     setTimeout(function(){statusEl.textContent='';},5000);
   }).catch(function(e){
-    statusEl.textContent='เนยย Error: '+e.message+' (เน€เธโ€ขเน€เธเธเน€เธเธเน€เธยเน€เธเธเน€เธเธเน€เธยเน€เธเธเน€เธยเน€เธเธ’ Sheet เน€เธโฌเน€เธยเน€เธยเน€เธย Public)';
+    statusEl.textContent='❌ Error: '+e.message+' (กรุณาตรวจสอบว่า Sheet เป็น Public)';
     statusEl.style.color='#c62828';
   });
 }
@@ -2225,7 +2232,7 @@ function saveProd(){
   if(!obj.name){alert('Please enter product name.');return;}
   if(id){var i=products.findIndex(function(p){return p.id===id;});if(i>-1)products[i]=obj;}else products.push(obj);
   fbSet('products', obj.id, obj);
-  sd();renderProdList();clearPF();popCatSel();popProdCatFilter();
+  sd();renderProdList();clearPF();popCatSel();popProdCatFilter();popCreateDDs();
 }
 function editP(id){var p=products.find(function(x){return x.id===id;});if(!p)return;document.getElementById('pm-id').value=p.id;document.getElementById('pm-code').value=p.code||'';document.getElementById('pm-name').value=p.name;document.getElementById('pm-cat-sel').value=p.cat||'';document.getElementById('pm-packing').value=p.packing||'';document.getElementById('pm-40').value=p.ft40||'';document.getElementById('pm-20').value=p.ft20||'';document.getElementById('pm-raw').value=p.raw||'';document.getElementById('pm-yield').value=p.yield||'';document.getElementById('pm-yield2').value=p.yield2||'';document.getElementById('pm-buyer').value=p.buyerId||'';}
 function delP(id){if(confirm('Delete product?')){products=products.filter(function(p){return p.id!==id;});fbDel('products', id);sd();renderProdList();}}
@@ -2340,15 +2347,15 @@ function buildSODoc(so){
   html+='</tr></thead><tbody>';
   so.rows.forEach(function(r,i){
     html+='<tr>';
-    html+='<td>'+(i+1)+'</td>';
-    html+='<td>'+(r.orderNo||'')+'</td>';
-    html+='<td>'+(r.pCode||'')+'</td>';
-    html+='<td style="text-align:left"><b>'+(r.description||'')+'</b>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(i+1)+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.orderNo||'')+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.pCode||'')+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:left"><b>'+(r.description||'')+'</b>';
     if(r.packing)html+='<br><span style="font-size:9.5px">'+r.packing+'</span>';
     html+='</td>';
-    html+='<td>'+r.qty+'</td>';
-    html+='<td>'+(r.shipment||so.shipmentDoc||'')+'</td>';
-    html+='<td>'+(r.port||so.port||'')+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+r.qty+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.shipment||so.shipmentDoc||'')+'</td>';
+    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.port||so.port||'')+'</td>';
     html+='</tr>';
   });
   html+='</tbody>';
@@ -2359,6 +2366,11 @@ function buildSODoc(so){
   html+='</tr></tfoot></table>';
   html+='<div style="margin-top:14px;font-size:10px"><b>REMARKS:</b> 1) REFER TO S/C NO. '+so.soNo;
   if(so.remarks)html+=' 2) '+so.remarks;
+  html+='</div>';
+  
+  html+='<div style="margin-top:30px;display:flex;justify-content:space-between;text-align:center">';
+  html+='<div style="width:200px"><div style="border-top:1px solid #000;margin-top:25px;padding-top:4px">Issued By (Sales)</div></div>';
+  html+='<div style="width:200px"><div style="border-top:1px solid #000;margin-top:25px;padding-top:4px">Acknowledged By (Production)</div>'+(so.acknowledgedAt?'<div style="color:green;font-weight:bold;font-size:9px">Approved: '+fd(so.acknowledgedAt)+'</div>':'')+'</div>';
   html+='</div></div>';
   return html;
 }
@@ -2398,6 +2410,12 @@ function initShipTrack(){
     var s=scMap[k];var o=document.createElement('option');o.value=s.scNo;o.textContent=s.scNo+' - '+s.buyer;o.dataset.buyer=s.buyer;o.dataset.port=s.port;sel.appendChild(o);
   });
   if(cv)sel.value=cv;
+  
+  var psel=document.getElementById('st-port'),pcv=psel.value;
+  psel.innerHTML='<option value="">Select Port</option>';
+  ports.forEach(function(p){var o=document.createElement('option');o.value=p.name;o.textContent=p.name;psel.appendChild(o);});
+  if(pcv)psel.value=pcv;
+
   var customers={};shipEntries.forEach(function(e){if(e.customer)customers[e.customer]=1;});
   var csel=document.getElementById('st-fil-customer'),ccv=csel.value;
   csel.innerHTML='<option value="">All Customers</option>';
@@ -2477,6 +2495,18 @@ function addNotePrompt(id,evt) {
 }
 
 document.addEventListener('click',function(e){if(!e.target.closest('#note-popup')&&!e.target.classList.contains('note-cell'))document.getElementById('note-popup').style.display='none';});
+function onPayTypeChange(){
+  var type=document.getElementById('f-pay-type').value;
+  var bid=document.getElementById('f-buyer').value;
+  var b=buyers.find(function(x){return x.id===bid;});
+  if(!type)return;
+  var pt=payTerms.find(function(p){return p.type===type;});
+  if(pt){
+    if(confirm('Update Payment Text to '+(type==='lc'?'L/C':type.replace('_',' ').toUpperCase())+' template?')){
+      document.getElementById('f-payment').value=pt.text;
+    }
+  }
+}
 function renderSTList(keepPage){
   if (!keepPage) {
     stPage = 0;
@@ -2509,7 +2539,6 @@ function renderSTList(keepPage){
     var complete=isComplete(e);
     var custPOs=getCustPOsForSC(e.scNo);
     var closingOver=e.closing&&new Date(e.closing.split(' ')[0])<today;
-    var noteShort=e.note?e.note.substring(0,20)+(e.note.length>20?'...':''):'-';
     html+='<tr>';
     html+='<td><b style="color:#1a3a5c">'+e.invNo+'</b></td>';
     html+='<td style="font-size:10px">'+(e.ref||'-')+'</td>';
@@ -2539,6 +2568,13 @@ function renderSTList(keepPage){
     html+='</div></td></tr>';
   });
   document.getElementById('st-tbody').innerHTML=html;
+  var totalQtyAll = list.reduce(function(s, e) {
+    var sc = contracts.find(function(c){return c.groups.some(function(g){return g.scNo === e.scNo;});});
+    if(!sc) return s;
+    var g = sc.groups.find(function(gr){return gr.scNo === e.scNo;});
+    return s + (g ? g.rows.reduce(function(rs, r){return rs + (parseFloat(r.qty)||0);}, 0) : 0);
+  }, 0);
+  document.getElementById('st-tfoot').innerHTML = '<tr><td colspan="7" style="text-align:right">Total QTY (MT)</td><td colspan="12">' + totalQtyAll.toFixed(3) + '</td></tr>';
 }
 function changeSTPage(dir) {
   stPage += dir;
@@ -2667,6 +2703,9 @@ function renderRawMat(){
   var showDetail=document.getElementById('rm-show-detail').checked;
   var latestC=getLatestContracts();
   var byMonth={},catQty={},rawTotals={'BB':0,'BIL':0,'Wing':0,'Other':0},skipped=0;
+  categories.forEach(function(c){
+    if(c.name) catQty[c.name] = 0;
+  });
   latestC.forEach(function(c){
     if(bf&&c.buyerId!==bf)return;
     c.groups.forEach(function(g){
@@ -2735,7 +2774,7 @@ function renderRawMat(){
   }
   
   var warnEl=document.getElementById('rm-yield-warn');
-  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - เน€เธยเน€เธเธเน€เธเธเน€เธย Yield Category & Yield Raw Material เน€เธยเน€เธย Product Master';}
+  if(skipped>0){warnEl.style.display='block';warnEl.innerHTML=skipped+' product line(s) skipped - กรุณาตั้งค่า Yield Category & Yield Raw Material ใน Product Master';}
   else warnEl.style.display='none';
   
   var months=sortMonths(Object.keys(byMonth));
@@ -2823,7 +2862,7 @@ function showAppModal(opts) {
     var confirmBtn = document.getElementById('app-modal-confirm');
     var type = opts.type || 'confirm';
     icon.className = 'app-modal-icon ' + type;
-    icon.textContent = type === 'success' ? 'เนยโ€' : '?';
+    icon.textContent = type === 'success' ? '✓' : '?';
     title.textContent = opts.title || 'Confirm Action';
     message.textContent = opts.message || '';
     input.style.display = opts.input ? 'block' : 'none';
@@ -2895,7 +2934,7 @@ function showAppPrompt(title, message, opts) {
   });
 }
 
-// เนโ€ขยเนโ€ขยเนโ€ขย APPROVAL WORKFLOW HELPERS เนโ€ขยเนโ€ขยเนโ€ขย
+// =========================================================================================================
 function getCurrentApprovalRole() {
   if (currentUser && currentUser.role) return currentUser.role;
   return 'sales';
