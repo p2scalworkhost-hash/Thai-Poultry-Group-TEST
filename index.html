@@ -81,10 +81,17 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 @media print{body *{visibility:hidden}#print-area,#print-area *{visibility:visible}#print-area{display:block!important;position:fixed;top:0;left:0;width:100%}.no-print{display:none!important}}
 @page { margin: 0; }
 @media print {
-  .doc-footer-img { position: fixed; bottom: 15mm; left: 50%; transform: translateX(-50%); width: 90%; }
-  .doc { page-break-after: always; padding-bottom: 50mm; }
+  .doc { width: 100% !important; page-break-after: always; padding-bottom: 50mm; }
+  .doc-footer-img {
+    position: static !important;
+    width: 100% !important;
+    margin-top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+  }
 }
-.doc{width:740px;margin:0 auto;font-family:Arial,sans-serif;font-size:10.5px;color:#000;line-height:1.45;background:#fff;padding-top:15mm;padding-left:10mm;padding-right:10mm;}
+.doc{width:740px;margin:0 auto;font-family:Arial,sans-serif;font-size:10.5px;color:#000;line-height:1.45;background:#fff;padding-top:15mm;padding-left:10mm;padding-right:10mm;position:relative;}
 .doc-header-img{width:100%;display:block}
 .doc-footer-img{width:100%;display:block;margin-top:10px}
 .doc-content{padding:8px 28px 14px}
@@ -108,11 +115,18 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
 .doc.lh-only .doc-header-img{display:none}
 .doc.lh-only .doc-footer-img{display:none}
 .doc.lh-only .doc-content{padding-top:var(--lh-top,30px)}
-.doc.pdf-page{page-break-after:always;break-after:page;min-height:1046px;display:flex;flex-direction:column}
+.doc.pdf-page{page-break-after:always;break-after:page;min-height:1046px;display:flex;flex-direction:column;position:relative;padding-bottom:15mm;box-sizing:border-box}
 .doc.pdf-page:last-child{page-break-after:auto;break-after:auto}
 .doc.pdf-page .doc-content{flex:1}
 .doc.pdf-page .doc-table tr{page-break-inside:avoid;break-inside:avoid}
-.doc.pdf-page .doc-footer-img{margin-top:auto}
+.doc.pdf-page .doc-footer-img {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 10mm !important;
+  width: calc(100% - 20mm) !important;
+  transform: none !important;
+  margin-top: 0 !important;
+}
 .doc-stamp-img{position:absolute;right:34px;bottom:28px;width:96px;transform:rotate(-4deg);opacity:.92;z-index:20}
 /* FIX: dash table -> flatten rowspan so columns stay aligned */
 #dash-body tr td {vertical-align:middle;}
@@ -221,6 +235,7 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
   <div class="nav-item active" data-page="create" data-perm="create" onclick="showPage('create',this)">New Contract</div>
   <div class="nav-item" data-page="dashboard" data-perm="orderSummary" onclick="showPage('dashboard',this)">Order Summary</div>
   <div class="nav-item" data-page="approval" data-perm="approveSaleContract" onclick="showPage('approval',this)" id="nav-approval">Approval Queue <span id="approval-badge" class="badge badge-red" style="display:none;margin-left:5px"></span></div>
+  <div class="nav-item" data-page="production" data-perm="production" onclick="showPage('production',this)" id="nav-production">Production Queue <span id="production-badge" class="badge badge-red" style="display:none;margin-left:5px"></span></div>
   <div class="nav-item" data-page="shiptrack" data-perm="shipmentTracking" onclick="showPage('shiptrack',this)">Shipment Tracking</div>
   <div class="nav-item" data-page="rawmat" data-perm="rawMaterial" onclick="showPage('rawmat',this)">Raw Material Plan</div>
   <div class="nav-sec">Masters</div>
@@ -289,12 +304,16 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     </div>
   </div>
 </div>
-<div class="actions no-print">
+<div class="actions no-print" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
   <button class="btn btn-outline" onclick="previewDoc('full')">Preview</button>
   <button class="btn btn-primary" onclick="saveContract()">Save</button>
-  <button class="btn btn-success" onclick="doPrint('full')">Full PDF</button>
+  <button class="btn btn-success" onclick="doPrint('pdf')">Full PDF</button>
   <button class="btn btn-warning" onclick="showLhAdj()">Letterhead</button>
   <button class="btn btn-outline" onclick="resetForm()">Clear</button>
+  <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;user-select:none;color:#333;margin-left:5px">
+    <input type="checkbox" id="chk-show-footer" checked onchange="toggleFooterVisibility(this.checked)" style="width:15px;height:15px;cursor:pointer">
+    Include Footer
+  </label>
 </div>
 <div id="lh-adj" style="display:none;margin-top:10px;background:#fff3e0;border-radius:6px;padding:9px 13px;border:1px solid #ffcc80">
   <div style="font-size:11px;font-weight:700;color:#e65100;margin-bottom:5px">Print on Letterhead</div>
@@ -435,6 +454,71 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div id="approval-all-empty" style="text-align:center;padding:20px;color:#aaa;display:none">No contracts found.</div>
   </div>
 </div>
+
+<!-- Production Queue Page -->
+<div id="page-production" class="page">
+  <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Production Queue</div>
+  
+  <!-- Current production user context -->
+  <div class="card no-print" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-weight:bold;color:#1b5e20;font-size:11px">Current User:</span>
+      <span id="production-user-label" style="font-size:11px;color:#333"></span>
+      <span id="production-role-label" class="badge badge-green" style="background:#2e7d32;color:#fff">Production</span>
+      <span style="font-size:10px;color:#555">Production actions are based on the logged-in account role.</span>
+    </div>
+  </div>
+
+  <!-- Awaiting Production Acknowledge Section -->
+  <div class="card">
+    <div class="card-title" style="color:#2e7d32">Awaiting Acknowledge</div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>SO No.</th>
+            <th>Date</th>
+            <th>Buyer</th>
+            <th>Shipment Month</th>
+            <th>Port</th>
+            <th>Products</th>
+            <th>Total QTY</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="production-pending-body"></tbody>
+      </table>
+    </div>
+    <div id="production-pending-empty" style="text-align:center;padding:20px;color:#aaa">No Sales Orders awaiting your acknowledgement.</div>
+  </div>
+
+  <!-- Acknowledged History Section -->
+  <div class="card">
+    <div class="card-title">Production Acknowledged History</div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>SO No.</th>
+            <th>Date</th>
+            <th>Buyer</th>
+            <th>Shipment Month</th>
+            <th>Port</th>
+            <th>Products</th>
+            <th>Total QTY</th>
+            <th>Status</th>
+            <th>Acknowledged At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="production-history-body"></tbody>
+      </table>
+    </div>
+    <div id="production-history-empty" style="text-align:center;padding:20px;color:#aaa">No acknowledged Sales Orders found.</div>
+  </div>
+</div>
+
 
 <div id="page-rawmat" class="page">
   <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:4px">Raw Material Planning</div>
@@ -650,7 +734,11 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="overlay-bar no-print">
       <span style="font-weight:700">Contract Preview</span>
       <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-success btn-sm" onclick="doPrint('full')">Full PDF</button>
+        <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#fff;cursor:pointer;user-select:none;margin-right:8px">
+          <input type="checkbox" id="chk-prev-show-footer" checked onchange="toggleFooterVisibility(this.checked)" style="width:14px;height:14px;cursor:pointer">
+          Include Footer
+        </label>
+        <button class="btn btn-success btn-sm" onclick="doPrint('pdf')">Full PDF</button>
         <button class="btn btn-warning btn-sm" onclick="showLhAdj()">Letterhead</button>
         <button onclick="document.getElementById('prev-overlay').style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">X</button>
       </div>
@@ -663,6 +751,10 @@ body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333}
     <div class="overlay-bar no-print">
       <span style="font-weight:700">Sale Order Preview</span>
       <div style="display:flex;gap:6px;align-items:center">
+        <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#fff;cursor:pointer;user-select:none;margin-right:8px">
+          <input type="checkbox" id="chk-so-show-footer" checked onchange="toggleFooterVisibility(this.checked)" style="width:14px;height:14px;cursor:pointer">
+          Include Footer
+        </label>
         <button class="btn btn-success btn-sm" onclick="printSO()">Print SO</button>
         <button onclick="document.getElementById('so-overlay').style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">X</button>
       </div>
@@ -700,58 +792,29 @@ var auth = null;
 var currentUser = null;
 var activePrintDoc = null;
 
-var USER_ACCESS = {
-  'preeda-cfp@chaveevangroup.com': {
-    name: 'Preeda CFP', role: 'sales',
-    permissions: { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
-  },
-  'chanapon_tpg@chaveevangroup.com': {
-    name: 'Chanapon TPG', role: 'sales',
-    permissions: { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:false, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
-  },
-  'rungnapha-tpg@chaveevangroup.com': {
-    name: 'Rungnapha TPG', role: 'sales',
-    permissions: { saleContract:false, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:true, orderSummary:false, approveSaleContract:false }
-  },
-  'patima-cfp@chaveevangroup.com': {
-    name: 'Patima Rattanasuwan', role: 'sales',
-    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:false }
-  },
-  'thanakrit-cfp@chaveevangroup.com': {
-    name: 'Thanakrit CFP', role: 'sales',
-    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:false }
-  },
-  'suthima@chaveevangroup.com': {
-    name: 'Suthima Khampa', role: 'manager',
-    permissions: { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:true }
-  },
-  'cfp@chaveevangroup.com': {
-    name: 'CFP', role: 'manager',
-    permissions: { saleContract:false, saleOrder:false, shipmentTracking:false, rawMaterial:true, approveSaleOrder:false, orderSummary:true, approveSaleContract:true }
-  }
-};
-
 function defaultPermissionsForRole(role) {
   if (role === 'admin') {
-    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
+    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true, production:true };
   }
   if (role === 'manager') {
-    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
+    return { saleContract:true, saleOrder:true, shipmentTracking:true, rawMaterial:true, approveSaleOrder:true, orderSummary:true, approveSaleContract:true, production:false };
   }
   if (role === 'supervisor') {
-    return { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:true, approveSaleContract:true };
+    return { saleContract:true, saleOrder:true, shipmentTracking:false, rawMaterial:false, approveSaleOrder:true, orderSummary:true, approveSaleContract:true, production:false };
   }
-  return { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:false, approveSaleOrder:false, orderSummary:false, approveSaleContract:false };
+  if (role === 'production') {
+    return { saleContract:false, saleOrder:false, shipmentTracking:false, rawMaterial:false, approveSaleOrder:false, orderSummary:false, approveSaleContract:false, production:true };
+  }
+  return { saleContract:true, saleOrder:false, shipmentTracking:false, rawMaterial:false, approveSaleOrder:false, orderSummary:false, approveSaleContract:false, production:false };
 }
 
 function inferUserProfile(email) {
   var normalized = (email || '').trim().toLowerCase();
-  var access = USER_ACCESS[normalized];
   var profile = {
     email: email || '',
-    name: access ? access.name : (normalized ? normalized.split('@')[0] : 'Sales User'),
-    role: access ? access.role : 'sales',
-    permissions: access ? Object.assign({}, access.permissions) : defaultPermissionsForRole('sales')
+    name: normalized ? normalized.split('@')[0] : 'Sales User',
+    role: 'sales',
+    permissions: defaultPermissionsForRole('sales')
   };
   if (normalized === 'sales@tpg.com') {
     profile.name = 'Sales Agent A';
@@ -873,8 +936,9 @@ var stPage = 0;
 var stPageSize = 50;
 
 var DEF_PAY='By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)';
-var HDR_IMG='https://i.ibb.co/YB01Z6fZ/TPG-Logo-head.png';
-var FTR_IMG='https://i.ibb.co/twpPXTbQ/TPG-bottom.png';
+var HDR_IMG='image1.png';
+var FTR_IMG='image2.png';
+var showFooterOption = true;
 var STAMP_IMG='stamp%20in%20Sale.png';
 var DEFAULT_BUYER_REMARKS='1. This contract cannot be amend or terminate unless both seller and buyer agree in a written form\n2. 10% more or less allow on actual loading quantity';
 var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -883,6 +947,37 @@ function T(s){return s.replace(/</g,'<').replace(/>/g,'>');}
 function moKey(s){if(!s)return'9999-99';var p=s.split(' ');var y=p[1]||'9999';var mi=MONTHS.indexOf(p[0]);return y+'-'+(mi>=0?String(mi+1).padStart(2,'0'):'99');}
 function sortMonths(arr){return arr.slice().sort(function(a,b){return moKey(a).localeCompare(moKey(b));});}
 function allShipMonths(){var s={};getLatestContracts().forEach(function(c){c.groups.forEach(function(g){if(g.shipmentMonth)s[g.shipmentMonth]=1;});});return sortMonths(Object.keys(s));}
+
+function toggleFooterVisibility(checked) {
+  showFooterOption = checked;
+  // Sync checkboxes
+  var chk1 = document.getElementById('chk-show-footer');
+  var chk2 = document.getElementById('chk-prev-show-footer');
+  var chk3 = document.getElementById('chk-so-show-footer');
+  if (chk1) chk1.checked = checked;
+  if (chk2) chk2.checked = checked;
+  if (chk3) chk3.checked = checked;
+  
+  // Toggle visibility of all header images in DOM
+  var headers = document.querySelectorAll('.doc-header-img');
+  headers.forEach(function(el) {
+    if (checked) {
+      el.style.setProperty('display', 'block', 'important');
+    } else {
+      el.style.setProperty('display', 'none', 'important');
+    }
+  });
+  
+  // Toggle visibility of all footer images in DOM
+  var footers = document.querySelectorAll('.doc-footer-img');
+  footers.forEach(function(el) {
+    if (checked) {
+      el.style.setProperty('display', 'block', 'important');
+    } else {
+      el.style.setProperty('display', 'none', 'important');
+    }
+  });
+}
 
 // Firebase save is handled by fbSet/fbBatchSet helpers.
 function sd(){}
@@ -931,6 +1026,7 @@ async function initApp() {
     setToday();
     addGroup();
     updateApprovalBadge();
+    updateProductionBadge();
     applyAccessControl();
     document.getElementById('main-app').style.display = isMobileLayout() ? 'block' : 'flex';
     var firstPage = firstAllowedPage();
@@ -1003,6 +1099,7 @@ function firstAllowedPage() {
   if (hasPerm('saleContract') || hasPerm('saleOrder') || hasPerm('approveSaleOrder')) return 'create';
   if (hasPerm('orderSummary')) return 'dashboard';
   if (hasPerm('approveSaleContract')) return 'approval';
+  if (hasPerm('production')) return 'production';
   if (hasPerm('shipmentTracking')) return 'shiptrack';
   if (hasPerm('rawMaterial')) return 'rawmat';
   return 'dashboard';
@@ -1055,6 +1152,7 @@ function showPage(p,el){
   if (p === 'create' && !hasPerm('create')) p = firstAllowedPage();
   if (p === 'dashboard' && !hasPerm('orderSummary')) { alert('You do not have access to Order Summary.'); return; }
   if (p === 'approval' && !hasPerm('approveSaleContract')) { alert('You do not have access to approve Sales Contracts.'); return; }
+  if (p === 'production' && !hasPerm('production')) { alert('You do not have access to Production Queue.'); return; }
   if (p === 'shiptrack' && !hasPerm('shipmentTracking')) { alert('You do not have access to Shipment Tracking.'); return; }
   if (p === 'rawmat' && !hasPerm('rawMaterial')) { alert('You do not have access to Raw Material Plan.'); return; }
   document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active');});
@@ -1071,6 +1169,7 @@ function showPage(p,el){
   if(p==='rawmat')initRawMat();
   if(p==='create'){popCreateDDs();popIncotermSel();setToday();switchCreateTab(hasPerm('saleContract')?'contract':'so');}
   if(p==='approval')renderApprovalPage();
+  if(p==='production')renderProductionPage();
   if(isMobileLayout())closeMobileSidebar();
 }
 var gc=0;
@@ -1475,9 +1574,10 @@ function buildDocFrame(data,mode,rowsHtml,opts){
   var cls=mode==='lh'?'doc lh-only':'doc';
   if(opts.pdfPage)cls+=' pdf-page';
   var html='<div class="'+cls+'">';
-  html+='<img class="doc-header-img" src="'+HDR_IMG+'" alt="TPG Header">';
+  var headerStyle = showFooterOption ? '' : ' style="display:none !important;"';
+  html+='<img class="doc-header-img"'+headerStyle+' src="'+HDR_IMG+'" alt="TPG Header">';
   html+='<div class="doc-content">';
-  var revLabel = (data.version && data.version > 1) ? ' <span style="color:#c62828">REV.' + (data.version - 1) + '</span>' : '';
+  var revLabel = (data.version && data.version > 1) ? ' <span style="color:#c62828">REV.' + data.version + '</span>' : '';
   html+='<div class="doc-meta"><span>'+data.formNo + revLabel + '</span><span>'+fd(data.date)+'</span></div>';
   html+='<div class="doc-title-row">';
   html+='<div style="min-width:110px"></div>';
@@ -1510,17 +1610,17 @@ function buildDocFrame(data,mode,rowsHtml,opts){
   }
   
   if(opts.showSignature!==false){
-    html+='<div class="doc-sig" style="position:relative;display:flex;justify-content:space-between;margin-top:20px;padding:0 10px">';
+    html+='<div class="doc-sig" style="position:relative;display:flex;justify-content:space-between;margin-top:25px;padding:0 30px">';
     if (data.approvalStatus === 'approved') {
       html+='<img class="doc-stamp-img" src="'+STAMP_IMG+'" alt="TPG Stamp">';
     }
-    html+='<div class="doc-sig-block" style="text-align:center;width:210px"><div>'+data.buyerName+'</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Buyer</div></div>';
-    html+='<div class="doc-sig-block" style="text-align:center;width:210px;position:relative"><div>Reviewed By</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Reviewed By</div></div>';
-    html+='<div class="doc-sig-block" style="text-align:center;width:210px;position:relative">'+managerSig+'<div>Thai Poultry Group Co., LTD</div><div class="doc-sig-line" style="border-top:1px solid #000;margin:26px 0 3px;padding-top:3px;font-size:10px">Seller<br>Varavuth Khampa<br>Managing Director</div></div>';
+    html+='<div class="doc-sig-block" style="text-align:center;width:230px"><div style="height:55px;display:flex;align-items:flex-start;justify-content:center;padding-top:3px;font-size:11px">'+data.buyerName+'</div><div style="border-top:1px solid #000;padding-top:3px;font-size:10px">Buyer</div></div>';
+    html+='<div class="doc-sig-block" style="text-align:center;width:230px;position:relative">'+managerSig+'<div style="height:55px;display:flex;align-items:flex-start;justify-content:center;padding-top:3px;font-size:11px">Thai Poultry Group Co., LTD</div><div style="border-top:1px solid #000;padding-top:3px;font-size:10px">Seller<br>Varavuth Khampa<br>Managing Director</div></div>';
     html+='</div>';
   }
 
-  html+='</div><img class="doc-footer-img" src="'+FTR_IMG+'" alt="TPG Footer"></div>';
+  var footerStyle = showFooterOption ? '' : ' style="display:none !important;"';
+  html+='</div><img class="doc-footer-img"'+footerStyle+' src="'+FTR_IMG+'" alt="TPG Footer"></div>';
   return html;
 }
 
@@ -1751,8 +1851,9 @@ function renderDash(keepPage){
       var sepStyle=isFirst?'border-top:2px solid #c5d8ec':'';
       rows+='<tr style="'+sepStyle+'">';
       if(isExcept){
-        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge+'<br><span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'<span style="font-size:9px;color:#bbb">↳</span>')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span class="badge badge-blue" style="font-size:9px">'+g.scNo+'</span>'+appBadge:'<span style="font-size:9px;color:#bbb">↳</span>')+'</td>';
         rows+='<td style="font-size:10px">'+(isFirst?invCell:'')+'</td>';
+        rows+='<td style="'+dimStyle+'">'+(isFirst?'<span style="font-size:10px;color:#888">'+c.buyerName+'</span>':'')+'</td>';
         rows+='<td>'+(isFirst?(custPOs?'<span class="badge badge-amber" style="font-size:9px">'+custPOs+'</span>':'-'):'')+'</td>';
         rows+='<td style="font-size:10px"><small style="color:#888">['+(r.productCode||'')+']</small> '+r.productName+'</td>';
         rows+='<td style="text-align:right">'+r.qty+'</td>';
@@ -1793,10 +1894,10 @@ function renderDash(keepPage){
     var isExcept = (g.scNo === '555/26');
     rows+='<tr class="subtotal-row">';
     if (isExcept) {
-      rows+='<td colspan="3" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
+      rows+='<td colspan="5" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
       rows+='<td style="text-align:right">'+tQty.toFixed(3)+'</td><td></td>';
       rows+='<td style="text-align:right;color:#1a3a5c">$'+tVal.toLocaleString('en-US',{minimumFractionDigits:2})+'</td>';
-      rows+='<td colspan="11"></td>';
+      rows+='<td colspan="10"></td>';
     } else {
       rows+='<td colspan="5" style="text-align:right;font-size:11px;color:#1a3a5c;padding:4px 8px">'+g.scNo+(custPOs?' | PO: '+custPOs:'')+'</td>';
       rows+='<td style="text-align:right">'+tQty.toFixed(3)+'</td><td></td>';
@@ -2321,57 +2422,73 @@ function sendSOById(id){
   warn+='</div></div>';
   document.getElementById('so-prev-area').innerHTML=warn+buildSODoc(so);
   document.getElementById('so-overlay').style.display='block';
+  var chk=document.getElementById('chk-so-show-footer');if(chk)chk.checked=showFooterOption;
 }
-function confirmSendSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;so.status='sent_to_production';so.sentAt=new Date().toISOString();fbSet('saleOrders', so.id, so);sd();document.getElementById('so-overlay').style.display='none';renderSOList();alert('S/O '+so.soNo+' sent to Production!');}
-function acknowledgeSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;if(!confirm('Approve / Acknowledge S/O '+so.soNo+'?'))return;so.status='acknowledged';so.acknowledgedAt=new Date().toISOString();fbSet('saleOrders', so.id, so);sd();renderSOList();}
-function viewSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;document.getElementById('so-prev-area').innerHTML=buildSODoc(so);document.getElementById('so-overlay').style.display='block';}
+function confirmSendSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;so.status='sent_to_production';so.sentAt=new Date().toISOString();fbSet('saleOrders', so.id, so);sd();document.getElementById('so-overlay').style.display='none';renderSOList();updateProductionBadge();alert('S/O '+so.soNo+' sent to Production!');}
+function acknowledgeSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;if(!confirm('Approve / Acknowledge S/O '+so.soNo+'?'))return;so.status='acknowledged';so.acknowledgedAt=new Date().toISOString();fbSet('saleOrders', so.id, so);sd();renderSOList();updateProductionBadge();}
+function viewSO(id){var so=saleOrders.find(function(x){return x.id===id;});if(!so)return;document.getElementById('so-prev-area').innerHTML=buildSODoc(so);document.getElementById('so-overlay').style.display='block';var chk=document.getElementById('chk-so-show-footer');if(chk)chk.checked=showFooterOption;}
 function buildSODoc(so){
   var totalQty=so.rows.reduce(function(s,r){return s+(parseFloat(r.qty)||0);},0);
-  var html='<div style="width:720px;margin:0 auto;font-family:Arial,sans-serif;font-size:10.5px;color:#000;line-height:1.5">';
-  html+='<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">';
-  html+='<div><b>Thai Poultry Group Co., Ltd.</b></div>';
-  html+='<div style="text-align:right"><b>FM-MK-03/05</b><br>'+fd(so.date)+'</div></div>';
-  html+='<div style="text-align:center;font-size:15px;font-weight:700;margin:8px 0">SALE ORDER</div>';
-  html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:10.5px">';
+  var html='<div class="doc pdf-page">';
+  var headerStyle = showFooterOption ? '' : ' style="display:none !important;"';
+  html+='<img class="doc-header-img"'+headerStyle+' src="'+HDR_IMG+'" alt="TPG Header">';
+  html+='<div class="doc-content">';
+  html+='<div class="doc-meta"><span><b>FM-MK-03/05</b></span><span>'+fd(so.date)+'</span></div>';
+  html+='<div class="doc-title-row">';
+  html+='<div style="min-width:110px"></div>';
+  html+='<div class="doc-title" style="text-align:center;font-size:15px;font-weight:700;margin:8px 0">SALE ORDER</div>';
+  html+='<div class="doc-revised"></div>';
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:10.5px">';
   html+='<div><b>CUSTOMER:</b> '+so.buyerName+'</div>';
   html+='<div><b>S/O NO.:</b> '+so.soNo+'</div></div>';
-  html+='<table style="width:100%;border-collapse:collapse;font-size:10px">';
+  html+='<table class="doc-table" style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px">';
   html+='<thead><tr style="background:#d0d8e4">';
-  html+='<th style="border:1px solid #999;padding:4px;width:30px">ITEM</th>';
-  html+='<th style="border:1px solid #999;padding:4px">ORDER NO.</th>';
-  html+='<th style="border:1px solid #999;padding:4px">P-CODE</th>';
-  html+='<th style="border:1px solid #999;padding:4px">DESCRIPTION</th>';
-  html+='<th style="border:1px solid #999;padding:4px;width:70px">QTY</th>';
-  html+='<th style="border:1px solid #999;padding:4px">SHIPMENT</th>';
-  html+='<th style="border:1px solid #999;padding:4px">PORT</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;width:30px;text-align:center">ITEM</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;text-align:center">ORDER NO.</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;text-align:center">P-CODE</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;text-align:center">DESCRIPTION</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;width:70px;text-align:center">QTY</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;text-align:center">SHIPMENT</th>';
+  html+='<th style="background:#d0d8e4;border:1px solid #000;padding:4px;text-align:center">PORT</th>';
   html+='</tr></thead><tbody>';
   so.rows.forEach(function(r,i){
     html+='<tr>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(i+1)+'</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.orderNo||'')+'</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.pCode||'')+'</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:left"><b>'+(r.description||'')+'</b>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+(i+1)+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+(r.orderNo||'')+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+(r.pCode||'')+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:left"><b>'+(r.description||'')+'</b>';
     if(r.packing)html+='<br><span style="font-size:9.5px">'+r.packing+'</span>';
     html+='</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+r.qty+'</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.shipment||so.shipmentDoc||'')+'</td>';
-    html+='<td style="border:1px solid #bbb;padding:4px;text-align:center">'+(r.port||so.port||'')+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+r.qty+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+(r.shipment||so.shipmentDoc||'')+'</td>';
+    html+='<td style="border:1px solid #000;padding:4px;text-align:center">'+(r.port||so.port||'')+'</td>';
     html+='</tr>';
   });
   html+='</tbody>';
   html+='<tfoot><tr>';
-  html+='<td colspan="4" style="border:1px solid #bbb;padding:3px 5px;text-align:right;font-weight:700">TOTAL</td>';
-  html+='<td style="border:1px solid #bbb;padding:3px 5px;text-align:center;font-weight:700">'+(totalQty?totalQty.toFixed(4):'')+'</td>';
-  html+='<td colspan="2" style="border:1px solid #bbb"></td>';
+  html+='<td colspan="4" style="border:1px solid #000;padding:3px 5px;text-align:right;font-weight:700">TOTAL</td>';
+  html+='<td style="border:1px solid #000;padding:3px 5px;text-align:center;font-weight:700">'+(totalQty?totalQty.toFixed(4):'')+'</td>';
+  html+='<td colspan="2" style="border:1px solid #000"></td>';
   html+='</tr></tfoot></table>';
-  html+='<div style="margin-top:14px;font-size:10px"><b>REMARKS:</b> 1) REFER TO S/C NO. '+so.soNo;
+  html+='<div style="margin-top:10px;font-size:10px"><b>REMARKS:</b> 1) REFER TO S/C NO. '+so.soNo;
   if(so.remarks)html+=' 2) '+so.remarks;
   html+='</div>';
   
-  html+='<div style="margin-top:30px;display:flex;justify-content:space-between;text-align:center">';
-  html+='<div style="width:200px"><div style="border-top:1px solid #000;margin-top:25px;padding-top:4px">Issued By (Sales)</div></div>';
-  html+='<div style="width:200px"><div style="border-top:1px solid #000;margin-top:25px;padding-top:4px">Acknowledged By (Production)</div>'+(so.acknowledgedAt?'<div style="color:green;font-weight:bold;font-size:9px">Approved: '+fd(so.acknowledgedAt)+'</div>':'')+'</div>';
-  html+='</div></div>';
+  html+='<div class="doc-sig" style="margin-top:35px;display:flex;justify-content:space-between;text-align:center;padding:0 30px">';
+  html+='<div class="doc-sig-block" style="width:230px"><div style="border-top:1px solid #000;margin-top:40px;padding-top:4px;font-size:10px">Issued By (Sales)</div></div>';
+  html+='<div class="doc-sig-block" style="width:230px"><div style="border-top:1px solid #000;margin-top:40px;padding-top:4px;font-size:10px">Acknowledged By (Production)</div>';
+  if(so.acknowledgedAt) {
+    html+='<div style="color:green;font-weight:bold;font-size:9px;margin-top:3px">Approved: '+fd(so.acknowledgedAt)+'</div>';
+  }
+  html+='</div>';
+  html+='</div>';
+  
+  html+='</div>'; // close doc-content
+  
+  var footerStyle = showFooterOption ? '' : ' style="display:none !important;"';
+  html+='<img class="doc-footer-img"'+footerStyle+' src="'+FTR_IMG+'" alt="TPG Footer">';
+  html+='</div>'; // close doc
   return html;
 }
 function printSO(){var pa=document.getElementById('print-area');pa.style.display='block';pa.innerHTML=document.getElementById('so-prev-area').innerHTML;window.print();setTimeout(function(){pa.style.display='none';},1000);}
@@ -3176,6 +3293,150 @@ function downloadPDF(contractId) {
     document.getElementById('loading-overlay').classList.remove('show');
     alert('PDF Generation failed: ' + err.message);
   });
+}
+
+// =========================================================================================================
+// PRODUCTION QUEUE & FUNCTIONS
+// =========================================================================================================
+function syncProductionRoleUI() {
+  var userLabel = document.getElementById('production-user-label');
+  if (userLabel) {
+    userLabel.textContent = currentUser ? ((currentUser.name || currentUser.email) + ' (' + currentUser.email + ')') : 'Not logged in';
+  }
+  var roleLabel = document.getElementById('production-role-label');
+  if (roleLabel) {
+    roleLabel.textContent = currentUser ? (currentUser.role === 'admin' ? 'Admin' : 'Production') : 'Production';
+    if (currentUser && currentUser.role === 'admin') {
+      roleLabel.style.background = '#0d47a1'; // Blue badge for Admin
+    } else {
+      roleLabel.style.background = '#2e7d32'; // Green badge for Production
+    }
+  }
+}
+
+function updateProductionBadge() {
+  var count = 0;
+  if (window.saleOrders) {
+    saleOrders.forEach(function(so) {
+      if (so.status === 'sent_to_production') {
+        count++;
+      }
+    });
+  }
+  var badge = document.getElementById('production-badge');
+  if (badge) {
+    if (count > 0 && hasPerm('production')) {
+      badge.style.display = 'inline-block';
+      badge.textContent = count;
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+function renderProductionPage() {
+  syncProductionRoleUI();
+  updateProductionBadge();
+  
+  var pendingBody = document.getElementById('production-pending-body');
+  var historyBody = document.getElementById('production-history-body');
+  if (!pendingBody || !historyBody) return;
+  
+  var pendingHtml = '';
+  var historyHtml = '';
+  
+  var pendingCount = 0;
+  var historyCount = 0;
+  
+  if (window.saleOrders) {
+    // Sort so history displays latest first
+    var sortedSO = saleOrders.slice().sort(function(a, b) {
+      var dateA = a.acknowledgedAt || a.date || '';
+      var dateB = b.acknowledgedAt || b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    sortedSO.forEach(function(so) {
+      var prods = so.rows.map(function(r){return r.pCode||r.description;}).filter(Boolean).slice(0,2).join(', ');
+      var totalQty = so.rows.reduce(function(s,r){return s+(parseFloat(r.qty)||0);},0);
+      var isSup = so.status === 'superseded';
+      
+      if (so.status === 'sent_to_production') {
+        pendingCount++;
+        pendingHtml += '<tr>';
+        pendingHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span></td>';
+        pendingHtml += '<td>' + fd(so.date) + '</td>';
+        pendingHtml += '<td style="font-size:10px">' + so.buyerName + '</td>';
+        pendingHtml += '<td style="font-size:10px">' + (so.shipmentDoc || '-') + '</td>';
+        pendingHtml += '<td style="font-size:10px">' + (so.port || '-') + '</td>';
+        pendingHtml += '<td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + prods + '</td>';
+        pendingHtml += '<td style="text-align:right">' + (totalQty ? totalQty.toFixed(3) : '-') + '</td>';
+        pendingHtml += '<td><span class="badge badge-amber">Sent to Production</span></td>';
+        pendingHtml += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
+        pendingHtml += '<button class="btn btn-outline btn-xs" onclick="viewSO(\'' + so.id + '\')">View</button>';
+        pendingHtml += '<button class="btn btn-success btn-xs" onclick="productionAcknowledge(\'' + so.id + '\')">Acknowledge</button>';
+        pendingHtml += '<button class="btn btn-danger btn-xs" onclick="productionReject(\'' + so.id + '\')">Reject</button>';
+        pendingHtml += '</div></td></tr>';
+      } else if (so.status === 'acknowledged') {
+        historyCount++;
+        historyHtml += '<tr ' + (isSup ? 'style="opacity:0.5;background:#fafafa"' : '') + '>';
+        historyHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span></td>';
+        historyHtml += '<td>' + fd(so.date) + '</td>';
+        historyHtml += '<td style="font-size:10px">' + so.buyerName + '</td>';
+        historyHtml += '<td style="font-size:10px">' + (so.shipmentDoc || '-') + '</td>';
+        historyHtml += '<td style="font-size:10px">' + (so.port || '-') + '</td>';
+        historyHtml += '<td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + prods + '</td>';
+        historyHtml += '<td style="text-align:right">' + (totalQty ? totalQty.toFixed(3) : '-') + '</td>';
+        historyHtml += '<td><span class="badge badge-green">Acknowledged</span></td>';
+        historyHtml += '<td style="font-size:10px">' + (so.acknowledgedAt ? fd(so.acknowledgedAt) : '-') + '</td>';
+        historyHtml += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
+        historyHtml += '<button class="btn btn-outline btn-xs" onclick="viewSO(\'' + so.id + '\')">View</button>';
+        historyHtml += '</div></td></tr>';
+      }
+    });
+  }
+  
+  pendingBody.innerHTML = pendingHtml;
+  historyBody.innerHTML = historyHtml;
+  
+  document.getElementById('production-pending-empty').style.display = pendingCount ? 'none' : 'block';
+  document.getElementById('production-history-empty').style.display = historyCount ? 'none' : 'block';
+}
+
+async function productionAcknowledge(id) {
+  var so = saleOrders.find(function(x){return x.id === id;});
+  if (!so) return;
+  if (await showAppConfirm('Acknowledge S/O?', 'Do you want to acknowledge S/O ' + so.soNo + '?', 'Acknowledge')) {
+    so.status = 'acknowledged';
+    so.acknowledgedAt = new Date().toISOString();
+    fbSet('saleOrders', so.id, so);
+    sd();
+    renderProductionPage();
+    updateProductionBadge();
+    await showAppAlert('Acknowledged', 'S/O acknowledged successfully.', 'success');
+  }
+}
+
+async function productionReject(id) {
+  var so = saleOrders.find(function(x){return x.id === id;});
+  if (!so) return;
+  var reason = await showAppPrompt('Reject S/O?', 'Enter rejection reason for S/O ' + so.soNo + '.', {
+    placeholder: 'Reason / comments',
+    required: true,
+    requiredMessage: 'Rejection reason is required.',
+    confirmText: 'Reject'
+  });
+  if (reason === false) return;
+  if (!reason) return;
+  
+  so.status = 'draft';
+  so.rejectReason = reason;
+  so.remarks = '[Rejected by Production: ' + reason + '] ' + (so.remarks || '');
+  fbSet('saleOrders', so.id, so);
+  sd();
+  renderProductionPage();
+  updateProductionBadge();
+  await showAppAlert('Rejected', 'S/O rejected and returned to draft.', 'success');
 }
 </script>
 </body>
