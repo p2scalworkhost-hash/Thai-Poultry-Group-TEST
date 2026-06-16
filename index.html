@@ -2792,7 +2792,7 @@
       html += '<img class="doc-header-img"' + headerStyle + ' src="' + HDR_IMG + '" alt="TPG Header">';
       html += '<div class="doc-content" style="position:relative;">';
       if (data.version && data.version > 1) {
-        html += '<div style="position:absolute;right:30px;top:55px;border:2px solid #c62828;color:#c62828;font-size:12px;font-weight:bold;padding:3px 7px;border-radius:4px;transform:rotate(3deg);text-transform:uppercase;z-index:10;font-family:Arial,sans-serif;">revised.' + data.version + '</div>';
+        html += '<div style="position:absolute;right:30px;top:55px;color:#000;font-size:12px;font-weight:bold;text-transform:uppercase;z-index:10;font-family:Arial,sans-serif;">revised.' + data.version + '</div>';
       }
       html += '<div class="doc-meta"><span>' + data.formNo + '</span><span>' + fd(data.date) + '</span></div>';
       html += '<div class="doc-title-row">';
