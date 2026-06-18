@@ -1113,26 +1113,26 @@
     <div class="sidebar">
       <div class="sidebar-logo"><b>Thai Poultry Group</b><span>Sales Contract System</span></div>
       <div class="nav-sec">Documents</div>
-      <div class="nav-item active" data-page="create" data-perm="create" onclick="showPage('create',this)">New Contract
+      <div class="nav-item active" data-page="create" data-perm="create" onclick="showPage('create',this)">Sale Contract
       </div>
       <div class="nav-item" data-page="dashboard" data-perm="orderSummary" onclick="showPage('dashboard',this)">Order
         Summary</div>
       <div class="nav-item" data-page="approval" data-perm="approveSaleContract" onclick="showPage('approval',this)"
-        id="nav-approval">Approval Queue <span id="approval-badge" class="badge badge-red"
+        id="nav-approval">Sale Contract Approval Queue <span id="approval-badge" class="badge badge-red"
           style="display:none;margin-left:5px"></span></div>
       <div class="nav-item" data-page="production" data-perm="production" onclick="showPage('production',this)"
-        id="nav-production">Production Queue <span id="production-badge" class="badge badge-red"
+        id="nav-production">Production Approval Queue <span id="production-badge" class="badge badge-red"
           style="display:none;margin-left:5px"></span></div>
       <div class="nav-item" data-page="shiptrack" data-perm="shipmentTracking" onclick="showPage('shiptrack',this)">
         Shipment Tracking</div>
       <div class="nav-item" data-page="rawmat" data-perm="rawMaterial" onclick="showPage('rawmat',this)">Raw Material
         Plan</div>
-      <div class="nav-sec">Masters</div>
-      <div class="nav-item" onclick="showPage('buyers',this)">Buyer Master</div>
-      <div class="nav-item" onclick="showPage('products',this)">Product Master</div>
-      <div class="nav-item" onclick="showPage('ports',this)">Ports</div>
-      <div class="nav-item" onclick="showPage('incoterms',this)">Incoterms</div>
-      <div class="nav-item" onclick="showPage('payments',this)">Payment Terms</div>
+      <div class="nav-sec" data-perm="masters">Masters</div>
+      <div class="nav-item" data-perm="masters" onclick="showPage('buyers',this)">Buyer Master</div>
+      <div class="nav-item" data-perm="masters" onclick="showPage('products',this)">Product Master</div>
+      <div class="nav-item" data-perm="masters" onclick="showPage('ports',this)">Ports</div>
+      <div class="nav-item" data-perm="masters" onclick="showPage('incoterms',this)">Incoterms</div>
+      <div class="nav-item" data-perm="masters" onclick="showPage('payments',this)">Payment Terms</div>
       <!-- Logged in User Status (bottom-left) -->
       <div class="sidebar-user"
         style="margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 11px;">
@@ -1170,12 +1170,12 @@
               <div class="fg"><label>Buyer</label><select id="f-buyer" onchange="onBuyerChange()">
                   <option value="">Select Buyer</option>
                 </select></div>
-              <div style="display:flex;align-items:center;gap:6px;padding-top:16px">
+              <div style="display:none;align-items:center;gap:6px;padding-top:16px">
                 <input type="checkbox" id="f-show-contact" checked style="width:14px;height:14px">
                 <label for="f-show-contact" style="font-size:11px;color:#1a3a5c;font-weight:700;cursor:pointer">Show
                   Contact</label>
               </div>
-              <div class="fg" style="max-width:130px"><label>Incoterm</label><select id="f-incoterm">
+              <div class="fg" style="max-width:130px;display:none"><label>Incoterm</label><select id="f-incoterm">
                   <option value="">Select</option>
                 </select></div>
             </div>
@@ -1201,7 +1201,7 @@
               <div class="fg"><label>Remarks</label><textarea id="f-remarks" rows="2"></textarea></div>
             </div>
             <div class="form-row" style="align-items:center">
-              <div class="fg" style="max-width:150px"><label>Payment Type</label><select id="f-pay-type"
+              <div class="fg" style="max-width:150px;display:none"><label>Payment Type</label><select id="f-pay-type"
                   onchange="onPayTypeChange()">
                   <option value="">Select</option>
                   <option value="lc">L/C</option>
@@ -1304,7 +1304,10 @@
         </div>
       </div>
       <div id="page-dashboard" class="page">
-        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Order Summary</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700;color:#1a3a5c">Order Summary</div>
+          <button class="btn btn-outline btn-xs no-print" id="toggle-trend-btn" onclick="togglePriceTrend()">Show Price Trend Chart</button>
+        </div>
         <div class="card">
           <div class="fil-bar">
             <select id="fil-month" onchange="renderDash()">
@@ -1317,10 +1320,7 @@
               <option value="">All Buyers</option>
             </select>
             <input id="fil-q" placeholder="Search SC / Product..." oninput="renderDash()" style="width:170px">
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox"
-                id="fil-show-revised" onchange="renderDash()"> Show Revised</label>
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox"
-                id="fil-show-cancelled" onchange="renderDash()"> Show Cancelled</label>
+
           </div>
           <div class="stat-cards" id="os-stat-cards"></div>
           <table class="dt">
@@ -1349,15 +1349,23 @@
             <tbody id="dash-body"></tbody>
           </table>
           <div id="dash-pagination" class="no-print"
-            style="margin-top:10px;display:flex;justify-content:center;align-items:center;gap:12px">
-            <button class="btn btn-outline btn-xs" id="dash-prev-btn" onclick="changeDashPage(-1)">Previous</button>
-            <span id="dash-page-info" style="font-size:11px">Page 1</span>
-            <button class="btn btn-outline btn-xs" id="dash-next-btn" onclick="changeDashPage(1)">Next</button>
+            style="margin-top:15px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;gap:15px;align-items:center">
+              <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox"
+                  id="fil-show-revised" onchange="renderDash()"> Show Revised</label>
+              <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox"
+                  id="fil-show-cancelled" onchange="renderDash()"> Show Cancelled</label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <button class="btn btn-outline btn-xs" id="dash-prev-btn" onclick="changeDashPage(-1)">Previous</button>
+              <span id="dash-page-info" style="font-size:11px">Page 1</span>
+              <button class="btn btn-outline btn-xs" id="dash-next-btn" onclick="changeDashPage(1)">Next</button>
+            </div>
           </div>
           <div id="dash-empty" style="text-align:center;padding:28px;color:#aaa;display:none">No contracts yet.</div>
         </div>
         <!-- Product Price Trend Section -->
-        <div class="card" id="price-trend-card">
+        <div class="card" id="price-trend-card" style="display:none">
           <div class="card-title">Product Price Trend
             <div style="display:flex;gap:7px;align-items:center">
               <select id="pt-fil-product" onchange="renderPriceTrend()"
@@ -1405,7 +1413,7 @@
 
       <!-- Approval Queue Page -->
       <div id="page-approval" class="page">
-        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Approval Queue</div>
+        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Sale Contract Approval Queue</div>
 
         <!-- Current approver context -->
         <div class="card no-print" style="background:#e3f2fd;border:1px solid #90caf9;margin-bottom:12px">
@@ -1467,7 +1475,7 @@
 
       <!-- Production Queue Page -->
       <div id="page-production" class="page">
-        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Production Queue</div>
+        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Production Approval Queue</div>
 
         <!-- Current production user context -->
         <div class="card no-print" style="background:#e8f5e9;border:1px solid #a5d6a7;margin-bottom:12px">
@@ -1641,10 +1649,10 @@
                   <option>Wing</option>
                   <option>Other</option>
                 </select></div>
-              <div class="fg"><label>Yield Category (%)</label><input id="pm-yield" type="number" step="0.1"></div>
+              <div class="fg"><label>Product Yield (%)</label><input id="pm-yield" type="number" step="0.1"></div>
               <div class="fg"><label>Yield Raw Material (%)</label><input id="pm-yield2" type="number" step="0.1"></div>
             </div>
-            <div style="font-size:10px;color:#888;margin-bottom:6px">Raw Need = Load x YC% x YR%</div>
+            <div style="font-size:10px;color:#888;margin-bottom:6px">Raw Need = Load / PY% / YR%</div>
             <div class="form-row">
               <div class="fg"><label>Assign to Buyer</label><select id="pm-buyer">
                   <option value="">All</option>
@@ -1988,18 +1996,18 @@
 
     function defaultPermissionsForRole(role) {
       if (role === 'admin') {
-        return { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: true };
+        return { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: true, masters: true };
       }
       if (role === 'manager') {
-        return { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false };
+        return { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false, masters: true };
       }
       if (role === 'supervisor') {
-        return { saleContract: true, saleOrder: true, shipmentTracking: false, rawMaterial: false, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false };
+        return { saleContract: true, saleOrder: true, shipmentTracking: false, rawMaterial: false, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false, masters: true };
       }
       if (role === 'production') {
-        return { saleContract: false, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: true };
+        return { saleContract: false, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: true, masters: false };
       }
-      return { saleContract: true, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: false };
+      return { saleContract: true, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: false, masters: true };
     }
 
     function inferUserProfile(email) {
@@ -2130,10 +2138,10 @@
     var stPageSize = 50;
 
     var DEF_PAY = 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)';
-    var HDR_IMG = 'image1.png';
-    var FTR_IMG = 'image2.png';
+    var HDR_IMG = 'assets/image1.png';
+    var FTR_IMG = 'assets/image2.png';
     var showFooterOption = true;
-    var STAMP_IMG = 'stamp%20in%20Sale.png';
+    var STAMP_IMG = 'assets/stamp_in_sale.png';
     var DEFAULT_BUYER_REMARKS = '1. This contract cannot be amend or terminate unless both seller and buyer agree in a written form\n2. 10% more or less allow on actual loading quantity';
     var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -2299,7 +2307,7 @@
       return 'dashboard';
     }
     function applyAccessControl() {
-      document.querySelectorAll('.nav-item[data-perm]').forEach(function (item) {
+      document.querySelectorAll('.nav-item[data-perm], .nav-sec[data-perm]').forEach(function (item) {
         item.style.display = hasPerm(item.dataset.perm) ? '' : 'none';
       });
       var contractBtn = document.getElementById('tab-contract-btn');
@@ -2408,6 +2416,17 @@
         box.innerHTML = '<b>' + b.name + '</b>' + (b.contact ? ' - ' + b.contact : '') + '<br>' + b.addr.substring(0, 80) + '...';
         document.getElementById('f-payment').value = b.payment || '';
         document.getElementById('f-remarks').value = b.remarks || DEFAULT_BUYER_REMARKS;
+        // Auto-populate Payment Type from Buyer's Payment Term
+        if (b.payment) {
+          var payLower = b.payment.toLowerCase();
+          if (payLower.indexOf('l/c') >= 0 || payLower.indexOf('letter of credit') >= 0) {
+            document.getElementById('f-pay-type').value = 'lc';
+          } else if (payLower.indexOf('tt') >= 0 && payLower.indexOf('deposit') >= 0) {
+            document.getElementById('f-pay-type').value = 'tt_deposit';
+          } else if (payLower.indexOf('tt') >= 0 || payLower.indexOf('telegraphic') >= 0) {
+            document.getElementById('f-pay-type').value = 'tt_full';
+          }
+        }
         document.querySelectorAll('.prod-sel').forEach(function (sel) { var cv = sel.value; fillPS(sel, bid); sel.value = cv; });
       } else box.style.display = 'none';
     }
@@ -2590,6 +2609,7 @@
           if (firstSO) sendSOById(firstSO.id);
         }
       }
+      showPage('approval', document.getElementById('nav-approval'));
     }
     function autoGenSO(contractData) {
       var scNos = contractData.groups.map(function (g) { return g.scNo; }).filter(Boolean);
@@ -2604,7 +2624,7 @@
         if (!g.scNo) return;
         var prevVers = saleOrders.filter(function (so) { return so.soNo === g.scNo; });
         var newVer = prevVers.length ? Math.max.apply(null, prevVers.map(function (s) { return s.version || 1; })) + 1 : 1;
-        var newSO = { id: 'so' + Date.now() + Math.random(), soNo: g.scNo, version: newVer, contractId: contractData.id, date: contractData.date, buyerName: contractData.buyerName, buyerId: contractData.buyerId, shipmentDoc: g.shipmentDoc, shipmentMonth: g.shipmentMonth, port: g.port, rows: g.rows.map(function (r, i) { return { item: i + 1, orderNo: r.custPo, pCode: r.productCode, description: r.productName, packing: r.packing, qty: r.qty, shipment: g.shipmentDoc, port: g.port }; }), status: 'draft', remarks: '', sentAt: null, acknowledgedAt: null, supersededAt: null };
+        var newSO = { id: 'so' + Date.now() + Math.random(), soNo: g.scNo, version: newVer, contractId: contractData.id, date: contractData.date, buyerName: contractData.buyerName, buyerId: contractData.buyerId, shipToName: contractData.shipToName || '', shipToAddr: contractData.shipToAddr || '', shipmentDoc: g.shipmentDoc, shipmentMonth: g.shipmentMonth, port: g.port, rows: g.rows.map(function (r, i) { return { item: i + 1, orderNo: r.custPo, pCode: r.productCode, description: r.productName, packing: r.packing, qty: r.qty, shipment: g.shipmentDoc, port: g.port }; }), status: 'draft', remarks: '', sentAt: null, acknowledgedAt: null, supersededAt: null };
         saleOrders.unshift(newSO);
         fbSet('saleOrders', newSO.id, newSO);
       });
@@ -2963,7 +2983,48 @@
           if (displayC.indexOf(c) < 0) displayC.push(c);
         });
       }
-      var totalQtyAll = 0, totalValAll = 0, scSet = {}, buyerSet = {}, groups = [];
+      
+      // Calculate Summary stats based ONLY on latest/active contracts
+      var totalQtyAll = 0, totalValAll = 0, scSet = {}, buyerSet = {}, countryContainers = {};
+      latestC.forEach(function (c) {
+        if (bf && c.buyerId !== bf) return;
+        c.groups.forEach(function (g) {
+          if (mf && g.shipmentMonth !== mf) return;
+          if (yf && (g.shipmentMonth || '').indexOf(yf) < 0) return;
+          var ship = shipEntries.find(function (e) { return e.scNo === g.scNo; });
+          var custPOs = [];
+          g.rows.forEach(function (r) { if (r.custPo && custPOs.indexOf(r.custPo) < 0) custPOs.push(r.custPo); });
+          var custPOstr = custPOs.join(', ');
+          var rowText = (g.scNo + custPOstr + c.buyerName + g.shipmentDoc + (ship ? ship.invNo || '' : '') + g.rows.map(function (r) { return r.productName; }).join(' ')).toLowerCase();
+          if (qf && rowText.indexOf(qf) < 0) return;
+          
+          var tQty = g.rows.reduce(function (s, r) { return s + (parseFloat(r.qty) || 0); }, 0);
+          var tVal = g.rows.reduce(function (s, r) { return s + (parseFloat(r.total) || 0); }, 0);
+          totalQtyAll += tQty; totalValAll += tVal;
+          if (g.scNo) scSet[g.scNo] = 1;
+          buyerSet[c.buyerId] = 1;
+
+          // Country containers breakdown
+          var portObj = ports.find(function (p) { return p.name.toUpperCase() === (g.port || '').toUpperCase(); });
+          var country = portObj ? portObj.country.trim().toUpperCase() : 'OTHER';
+          g.rows.forEach(function (r) {
+            var qty = parseFloat(r.qty) || 0;
+            var prod = products.find(function (p) { return p.id === r.productId; }) || {};
+            var ft40 = parseFloat(prod.ft40) || 24;
+            var cons = qty / ft40;
+            countryContainers[country] = (countryContainers[country] || 0) + cons;
+          });
+        });
+      });
+
+      var countryList = [];
+      Object.keys(countryContainers).sort().forEach(function (c) {
+        countryList.push('<b>' + c + '</b>: ' + countryContainers[c].toFixed(1) + ' ตู้');
+      });
+      var countryStr = countryList.length ? countryList.join(', ') : 'ไม่มีข้อมูล';
+      var countryHtml = '<div class="stat-card" style="grid-column: span 2"><div class="sn" style="font-size:12px;font-weight:normal;height:auto;line-height:1.6;text-align:left;padding:4px 0">' + countryStr + '</div><div class="sl">Containers by Country</div></div>';
+
+      var groups = [];
       displayC.forEach(function (c) {
         if (bf && c.buyerId !== bf) return;
         c.groups.forEach(function (g) {
@@ -2977,9 +3038,6 @@
           if (qf && rowText.indexOf(qf) < 0) return;
           var tQty = g.rows.reduce(function (s, r) { return s + (parseFloat(r.qty) || 0); }, 0);
           var tVal = g.rows.reduce(function (s, r) { return s + (parseFloat(r.total) || 0); }, 0);
-          totalQtyAll += tQty; totalValAll += tVal;
-          if (g.scNo) scSet[g.scNo] = 1;
-          buyerSet[c.buyerId] = 1;
           groups.push({ c: c, g: g, ship: ship, custPOs: custPOstr, tQty: tQty, tVal: tVal });
         });
       });
@@ -2987,7 +3045,8 @@
         '<div class="stat-card"><div class="sn">' + Object.keys(scSet).length + '</div><div class="sl">SC Nos.</div></div>' +
         '<div class="stat-card"><div class="sn">' + totalQtyAll.toFixed(2) + '</div><div class="sl">Total QTY (MT)</div></div>' +
         '<div class="stat-card"><div class="sn" style="font-size:14px">$' + totalValAll.toLocaleString('en-US', { maximumFractionDigits: 0 }) + '</div><div class="sl">Total Value (USD)</div></div>' +
-        '<div class="stat-card"><div class="sn">' + Object.keys(buyerSet).length + '</div><div class="sl">Buyers</div></div>';
+        '<div class="stat-card"><div class="sn">' + Object.keys(buyerSet).length + '</div><div class="sl">Buyers</div></div>' +
+        countryHtml;
 
       document.getElementById('dash-empty').style.display = groups.length ? 'none' : 'block';
 
@@ -3007,7 +3066,7 @@
         // shared cells for this group
         var scCell = '<span class="badge badge-blue" style="font-size:9px">' + g.scNo + '</span><br><span style="font-size:10px;color:#888">' + c.buyerName + '</span>';
         var poCell = custPOs ? '<span class="badge badge-amber" style="font-size:9px">' + custPOs + '</span>' : '-';
-        var incoCell = c.incoterm || '';
+        var incoCell = (function() { var incos = {}; g.rows.forEach(function(r) { if (r.incoterm) incos[r.incoterm] = 1; }); var keys = Object.keys(incos); return keys.length ? keys.join(', ') : (c.incoterm || ''); })();
         var shipCell = g.shipmentDoc || '-';
         var moCell = '<span class="badge badge-amber" style="font-size:9px">' + (g.shipmentMonth || '-') + '</span>';
         var portCell = g.port || '-';
@@ -3035,10 +3094,8 @@
 
         var actCell = '<div style="display:flex;gap:3px;flex-direction:column">' +
           '<button class="btn btn-outline btn-xs" onclick="viewC(\'' + c.id + '\')">View</button>' +
-          (c.status !== 'cancelled' ? '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + c.id + '\')">Edit</button>' : '') +
           '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + c.id + '\')">' + pdfBtnName + '</button>' +
           submitBtn +
-          (c.status === 'active' ? '<button class="btn btn-danger btn-xs" onclick="cancelContract(\'' + c.id + '\')">Cancel</button>' : '') +
           '</div>';
         g.rows.forEach(function (r, i) {
           var isFirst = (i === 0);
@@ -3066,7 +3123,11 @@
             rows += '<td style="text-align:center;font-size:10px">' + (isFirst ? verCell : '') + '</td>';
             rows += '<td>' + (isFirst ? actCell : '') + '</td>';
           } else {
-            rows += '<td style="' + dimStyle + '">' + (isFirst ? '<span class="badge badge-blue" style="font-size:9px">' + g.scNo + '</span>' + appBadge : '<span style="font-size:9px;color:#bbb">↳</span>') + '</td>';
+            var scDisplay = g.scNo;
+            if (c.version > 1) {
+              scDisplay = '<b>' + g.scNo + ' (V' + c.version + ')</b>';
+            }
+            rows += '<td style="' + dimStyle + '">' + (isFirst ? '<span class="badge badge-blue" style="font-size:9px">' + scDisplay + '</span>' + appBadge : '<span style="font-size:9px;color:#bbb">↳</span>') + '</td>';
             rows += '<td style="font-size:10px">' + (isFirst ? invCell : '') + '</td>';
             rows += '<td style="' + dimStyle + '">' + (isFirst ? '<span style="font-size:10px;color:#888">' + c.buyerName + '</span>' : '') + '</td>';
             rows += '<td>' + (isFirst ? (custPOs ? '<span class="badge badge-amber" style="font-size:9px">' + custPOs + '</span>' : '-') : '') + '</td>';
@@ -3111,6 +3172,7 @@
     }
     var priceTrendChart = null;
     function renderPriceTrend() {
+      if (document.getElementById('price-trend-card').style.display === 'none') return;
       // Populate filter dropdowns
       var allProds = {}, allBuyers = {}, allYears = {};
       var latestC = getLatestContracts();
@@ -3215,6 +3277,22 @@
       var ctx = document.getElementById('price-trend-chart').getContext('2d');
       if (priceTrendChart) priceTrendChart.destroy();
       priceTrendChart = new Chart(ctx, { type: 'line', data: { labels: months, datasets: datasets }, options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: function (v) { return '$' + v.toLocaleString(); } }, title: { display: true, text: 'Price (USD/MT)' } }, x: { title: { display: true, text: 'Shipment Month' } } } } });
+    }
+    function togglePriceTrend() {
+      var card = document.getElementById('price-trend-card');
+      var btn = document.getElementById('toggle-trend-btn');
+      if (card.style.display === 'none') {
+        card.style.display = '';
+        btn.textContent = 'Hide Price Trend Chart';
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        renderPriceTrend();
+      } else {
+        card.style.display = 'none';
+        btn.textContent = 'Show Price Trend Chart';
+        btn.classList.add('btn-outline');
+        btn.classList.remove('btn-primary');
+      }
     }
     var SHEET_ID = '1hLX9yxpuc6lZ0ELwP2OfKS0kVWgRU2vfqgwpBVJVbVY';
     var BUYER_GID = '344446381';
@@ -3574,6 +3652,12 @@
       var qf = (document.getElementById('so-fil-q').value || '').toLowerCase();
       var showHistory = document.getElementById('so-show-history').checked;
       var list = saleOrders.filter(function (so) { if (!showHistory && so.status === 'superseded') return false; if (sf && so.status !== sf) return false; if (qf && (so.soNo + so.buyerName).toLowerCase().indexOf(qf) < 0) return false; return true; });
+      // Sort by date descending (latest first)
+      list.sort(function (a, b) {
+        var dateA = a.sentAt || a.date || '';
+        var dateB = b.sentAt || b.date || '';
+        return dateB.localeCompare(dateA);
+      });
       document.getElementById('so-empty').style.display = list.length ? 'none' : 'block';
       var html = '';
       list.forEach(function (so) {
@@ -3585,11 +3669,23 @@
         else if (so.status === 'acknowledged') stBadge = '<span class="badge badge-green">Acknowledged</span>';
         else if (so.status === 'superseded') stBadge = '<span class="badge badge-gray">Superseded</span>';
         else stBadge = '<span class="badge badge-gray">Draft</span>';
+        // Reject history badge
+        var rejectHistBadge = '';
+        if (so.rejectHistory && so.rejectHistory.length > 0) {
+          var lastReject = so.rejectHistory[so.rejectHistory.length - 1];
+          rejectHistBadge = '<div style="margin-top:3px"><span class="badge badge-red" style="font-size:8px;cursor:pointer" title="' + so.rejectHistory.length + ' rejection(s)" onclick="showRejectHistory(\'' + so.id + '\')">' + so.rejectHistory.length + 'x Rejected</span></div>';
+        }
         html += '<tr ' + (isSup ? 'style="opacity:0.5;background:#fafafa"' : '') + '>';
         html += '<td><span class="badge badge-blue">' + so.soNo + '</span></td>';
         html += '<td style="text-align:center">' + (so.version || 1) + '</td>';
+        var contract = contracts.find(function (c) { return c.id === so.contractId; });
+        var shipToName = so.shipToName || (contract ? contract.shipToName : '');
+        var buyerCell = so.buyerName;
+        if (shipToName) {
+          buyerCell += '<br><small style="color:#666">↳ Ship To: ' + shipToName + '</small>';
+        }
         html += '<td>' + fd(so.date) + '</td>';
-        html += '<td style="font-size:10px">' + so.buyerName + '</td>';
+        html += '<td style="font-size:10px">' + buyerCell + '</td>';
         html += '<td style="font-size:10px">' + (so.shipmentDoc || '-') + '</td>';
         html += '<td style="font-size:10px">' + (so.port || '-') + '</td>';
         html += '<td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + prods + '</td>';
@@ -3599,7 +3695,7 @@
         } else {
           html += '<td><input type="text" value="' + (so.remarks || '') + '" onchange="saveSORemarks(\'' + so.id + '\',this.value)" style="border:1px solid #d0d0d0;border-radius:3px;padding:3px 6px;font-size:11px;width:130px"></td>';
         }
-        html += '<td>' + stBadge + '</td>';
+        html += '<td>' + stBadge + rejectHistBadge + '</td>';
         html += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
         html += '<button class="btn btn-outline btn-xs" onclick="viewSO(\'' + so.id + '\')">View</button>';
         if (!isSup && so.status === 'draft') html += '<button class="btn btn-primary btn-xs" onclick="sendSOById(\'' + so.id + '\')">Send</button>';
@@ -3635,8 +3731,14 @@
       html += '<div class="doc-title" style="text-align:center;font-size:15px;font-weight:700;margin:8px 0">SALE ORDER</div>';
       html += '<div class="doc-revised"></div>';
       html += '</div>';
+      var contract = contracts.find(function (c) { return c.id === so.contractId; });
+      var shipToName = so.shipToName || (contract ? contract.shipToName : '');
+      var custText = '<b>CUSTOMER:</b> ' + so.buyerName;
+      if (shipToName) {
+        custText += '<br><b>SHIP TO:</b> ' + shipToName;
+      }
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:10.5px">';
-      html += '<div><b>CUSTOMER:</b> ' + so.buyerName + '</div>';
+      html += '<div>' + custText + '</div>';
       html += '<div><b>S/O NO.:</b> ' + so.soNo + '</div></div>';
       html += '<table class="doc-table" style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px">';
       html += '<thead><tr style="background:#d0d8e4">';
@@ -4029,20 +4131,25 @@
           g.rows.forEach(function (r) {
             var qty = parseFloat(r.qty) || 0; if (!qty) return;
             var prod = products.find(function (p) { return p.id === r.productId; }) || {};
-            var yc = prod.yield || 0;
-            var yr2 = prod.yield2 || 0;
+            var ycVal = prod.yield || 0;
+            var yr2Val = prod.yield2 || 0;
             var raw = prod.raw || 'Other';
             var cat = prod.cat || 'Other';
 
-            if (!yc || !yr2) { skipped++; return; }
-            var rawNeed = qty * (yc / 100) * (yr2 / 100);
+            if (!ycVal || !yr2Val) { skipped++; return; }
+            
+            // If yield is percentage (like 75), convert to decimal (0.75)
+            var yc = ycVal > 1 ? ycVal / 100 : ycVal;
+            var yr2 = yr2Val > 1 ? yr2Val / 100 : yr2Val;
+            
+            var rawNeed = qty / yc / yr2;
 
             if (!byMonth[mo].cats[cat]) byMonth[mo].cats[cat] = { cat: cat, raw: raw, rawNeed: 0, qty: 0, rows: [] };
             byMonth[mo].cats[cat].rawNeed += rawNeed;
             byMonth[mo].cats[cat].qty += qty;
             byMonth[mo].totalQty += qty;
-            byMonth[mo].cats[cat].rows.push({ scNo: g.scNo, product: r.productName, qty: qty, rawNeed: rawNeed.toFixed(3), yc: yc, yr2: yr2, buyer: c.buyerName });
-            byMonth[mo].rows.push({ scNo: g.scNo, product: r.productName, cat: cat, raw: raw, qty: qty, rawNeed: rawNeed.toFixed(3), yc: yc, yr2: yr2, buyer: c.buyerName });
+            byMonth[mo].cats[cat].rows.push({ scNo: g.scNo, product: r.productName, qty: qty, rawNeed: rawNeed.toFixed(3), yc: (yc * 100).toFixed(1), yr2: (yr2 * 100).toFixed(1), buyer: c.buyerName });
+            byMonth[mo].rows.push({ scNo: g.scNo, product: r.productName, cat: cat, raw: raw, qty: qty, rawNeed: rawNeed.toFixed(3), yc: (yc * 100).toFixed(1), yr2: (yr2 * 100).toFixed(1), buyer: c.buyerName });
 
             // 6.2 Display: Order quantity in MT per category
             catQty[cat] = (catQty[cat] || 0) + qty;
@@ -4087,7 +4194,7 @@
       }
 
       var warnEl = document.getElementById('rm-yield-warn');
-      if (skipped > 0) { warnEl.style.display = 'block'; warnEl.innerHTML = skipped + ' product line(s) skipped - กรุณาตั้งค่า Yield Category & Yield Raw Material ใน Product Master'; }
+      if (skipped > 0) { warnEl.style.display = 'block'; warnEl.innerHTML = skipped + ' product line(s) skipped - กรุณาตั้งค่า Product Yield & Yield Raw Material ใน Product Master'; }
       else warnEl.style.display = 'none';
 
       var months = sortMonths(Object.keys(byMonth));
@@ -4625,6 +4732,14 @@
       if (reason === false) return;
       if (!reason) return;
 
+      // Add to reject history log
+      if (!so.rejectHistory) so.rejectHistory = [];
+      so.rejectHistory.push({
+        reason: reason,
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: currentUser ? currentUser.name : 'Unknown'
+      });
+
       so.status = 'draft';
       so.rejectReason = reason;
       so.remarks = '[Rejected by Production: ' + reason + '] ' + (so.remarks || '');
@@ -4633,6 +4748,22 @@
       renderProductionPage();
       updateProductionBadge();
       await showAppAlert('Rejected', 'S/O rejected and returned to draft.', 'success');
+    }
+
+    // Show reject history popup for a Sale Order
+    function showRejectHistory(soId) {
+      var so = saleOrders.find(function (x) { return x.id === soId; });
+      if (!so || !so.rejectHistory || !so.rejectHistory.length) {
+        alert('No rejection history found.');
+        return;
+      }
+      var msg = 'Rejection History for S/O ' + so.soNo + ':\n\n';
+      so.rejectHistory.forEach(function (h, i) {
+        var dt = h.rejectedAt ? new Date(h.rejectedAt).toLocaleString('en-GB') : '-';
+        msg += (i + 1) + '. [' + dt + '] by ' + (h.rejectedBy || 'Unknown') + '\n';
+        msg += '   Reason: ' + h.reason + '\n\n';
+      });
+      alert(msg);
     }
   </script>
 </body>
