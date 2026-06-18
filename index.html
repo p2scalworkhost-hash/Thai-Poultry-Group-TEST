@@ -2093,34 +2093,7 @@
       try { db.collection(col).doc(id).delete().catch(function (e) { console.warn('fbDel error:', e); }); }
       catch (e) { console.warn('fbDel error:', e); }
     }
-    function fbBatchSet(col, items) {
-      if (!useFirebase || !db || !items.length) return;
-      try {
-        // Firestore batch max 500, split if needed
-        for (var i = 0; i < items.length; i += 400) {
-          var batch = db.batch();
-          items.slice(i, i + 400).forEach(function (item) {
-            batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
-          });
-          batch.commit().catch(function (e) { console.warn('fbBatchSet error:', e); });
-        }
-      } catch (e) { console.warn('fbBatchSet error:', e); }
-    }
-    function fbBatchDel(col, ids) {
-      if (!useFirebase || !db || !ids.length) return;
-      try {
-        var batch = db.batch();
-        ids.forEach(function (id) { batch.delete(db.collection(col).doc(id)); });
-        batch.commit().catch(function (e) { console.warn('fbBatchDel error:', e); });
-      } catch (e) { console.warn('fbBatchDel error:', e); }
-    }
 
-    // =========================================================================================================
-    var FB_COL = {
-      buyers: 'buyers', products: 'products', contracts: 'contracts',
-      ports: 'ports', payTerms: 'payTerms', saleOrders: 'saleOrders',
-      shipEntries: 'shipEntries', categories: 'categories', incoterms: 'incoterms'
-    };
 
     // =========================================================================================================
     var buyers = [];
@@ -2137,7 +2110,6 @@
     var stPage = 0;
     var stPageSize = 50;
 
-    var DEF_PAY = 'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK)';
     var HDR_IMG = 'assets/image1.png';
     var FTR_IMG = 'assets/image2.png';
     var showFooterOption = true;
@@ -2145,7 +2117,6 @@
     var DEFAULT_BUYER_REMARKS = '1. This contract cannot be amend or terminate unless both seller and buyer agree in a written form\n2. 10% more or less allow on actual loading quantity';
     var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    function T(s) { return s.replace(/</g, '<').replace(/>/g, '>'); }
     function moKey(s) { if (!s) return '9999-99'; var p = s.split(' '); var y = p[1] || '9999'; var mi = MONTHS.indexOf(p[0]); return y + '-' + (mi >= 0 ? String(mi + 1).padStart(2, '0') : '99'); }
     function sortMonths(arr) { return arr.slice().sort(function (a, b) { return moKey(a).localeCompare(moKey(b)); }); }
     function allShipMonths() { var s = {}; getLatestContracts().forEach(function (c) { c.groups.forEach(function (g) { if (g.shipmentMonth) s[g.shipmentMonth] = 1; }); }); return sortMonths(Object.keys(s)); }
@@ -2164,9 +2135,9 @@
       var headers = document.querySelectorAll('.doc-header-img');
       headers.forEach(function (el) {
         if (checked) {
-          el.style.setProperty('display', 'block', 'important');
+          el.style.setProperty('visibility', 'visible', 'important');
         } else {
-          el.style.setProperty('display', 'none', 'important');
+          el.style.setProperty('visibility', 'hidden', 'important');
         }
       });
 
@@ -2174,15 +2145,15 @@
       var footers = document.querySelectorAll('.doc-footer-img');
       footers.forEach(function (el) {
         if (checked) {
-          el.style.setProperty('display', 'block', 'important');
+          el.style.setProperty('visibility', 'visible', 'important');
         } else {
-          el.style.setProperty('display', 'none', 'important');
+          el.style.setProperty('visibility', 'hidden', 'important');
         }
       });
     }
 
     // Firebase save is handled by fbSet/fbBatchSet helpers.
-    function sd() { }
+
 
     // Load data from Firebase.
     async function loadData() {
@@ -2525,7 +2496,7 @@
       var bid = document.getElementById('f-buyer').value;
       var inco = document.getElementById('f-incoterm').value;
       var tr = document.createElement('tr');
-      var incoOpts = ['CFR', 'CNF', 'CIF', 'FOB', 'EXW', 'CPT'].map(function (i) { return '<option' + (i === inco ? ' selected' : '') + '>' + i + '</option>'; }).join('');
+      var incoOpts = getIncotermList().map(function (x) { var code = x.code || x.name || ''; return '<option' + (code === inco ? ' selected' : '') + '>' + code + '</option>'; }).join('');
       var inner = '<td style="text-align:center;color:#999">' + (tb.rows.length + 1) + '</td>';
       inner += '<td><select class="prod-sel" onchange="onPC(this,' + gid + ')"></select></td>';
       inner += '<td class="ro"><input type="text" readonly></td>';
@@ -2560,9 +2531,28 @@
         });
         groups.push({ scNo: document.getElementById('sc-no-' + gid) ? document.getElementById('sc-no-' + gid).value : '', shipmentDoc: document.getElementById('sc-ship-' + gid) ? document.getElementById('sc-ship-' + gid).value : '', shipmentMonth: document.getElementById('sc-mo-' + gid) ? document.getElementById('sc-mo-' + gid).value : '', port: portName, rows: rows });
       });
+      var editId = document.getElementById('editing-id').value;
+      if (editId) {
+        var old = contracts.find(function(c) { return c.id === editId; });
+        if (old) {
+          groups.forEach(function (g, idx) {
+            var oldG = old.groups[idx];
+            if (!oldG) {
+              g.isModified = true;
+            } else {
+              var newHash = JSON.stringify({ n: g.scNo, m: g.shipmentMonth, p: g.port, r: g.rows.map(function(r){ return {p:r.productId, q:r.qty, pr:r.price}; }) });
+              var oldHash = JSON.stringify({ n: oldG.scNo, m: oldG.shipmentMonth, p: oldG.port, r: oldG.rows.map(function(r){ return {p:r.productId, q:r.qty, pr:r.price}; }) });
+              if (newHash !== oldHash) {
+                g.isModified = true;
+              }
+            }
+          });
+        }
+      }
+
       return { date: document.getElementById('f-date').value, formNo: 'FM-MK-03/04 Rev.01', buyerId: bid, buyerName: b.name || '', buyerContact: b.contact || '', buyerBillAddr: b.billAddr || '', buyerAddr: b.addr || '', buyerTel: b.tel || '', buyerFax: b.fax || '', shipToId: stBid, shipToName: stB ? stB.name || '' : '', shipToAddr: shipToAddr, incoterm: document.getElementById('f-incoterm').value, payment: document.getElementById('f-payment').value, remarks: document.getElementById('f-remarks').value, payType: document.getElementById('f-pay-type').value, hasCom: document.getElementById('f-has-com').checked, comType: document.getElementById('f-com-type').value, comVal: parseFloat(document.getElementById('f-com-val').value) || 0, groups: groups };
-    }
-    function saveContract() {
+      }
+      function saveContract() {
       var data = getFD();
       if (!data.buyerName) { alert('Please select a buyer.'); return; }
       if (!data.groups.length) { alert('Please add at least one contract group.'); return; }
@@ -2588,7 +2578,7 @@
         contracts.unshift(data);
       }
       fbSet('contracts', data.id, data);
-      autoGenSO(data); sd();
+      autoGenSO(data); 
       var savedId = data.id;
       var scNoStr = data.groups.map(function (g) { return g.scNo; }).join(', ');
       resetForm();
@@ -2599,7 +2589,7 @@
         if (c) {
           c.approvalStatus = 'pending_supervisor';
           fbSet('contracts', c.id, c);
-          sd();
+          
           updateApprovalBadge();
           alert('Submitted for approval successfully!');
         }
@@ -2609,7 +2599,7 @@
           if (firstSO) sendSOById(firstSO.id);
         }
       }
-      showPage('approval', document.getElementById('nav-approval'));
+      showPage('solist');
     }
     function autoGenSO(contractData) {
       var scNos = contractData.groups.map(function (g) { return g.scNo; }).filter(Boolean);
@@ -2643,7 +2633,7 @@
       c.cancelReason = reason || '';
       c.cancelledAt = new Date().toISOString();
       fbSet('contracts', c.id, c);
-      sd();
+      
       var showCancelled = document.getElementById('fil-show-cancelled');
       if (showCancelled) showCancelled.checked = true;
       renderDash();
@@ -2760,10 +2750,11 @@
       var rows = []; var grandTotal = 0; var totalQty = 0; var docNo = 0;
       data.groups.forEach(function (g) {
         docNo++;
+        var rowStyle = g.isModified ? 'font-weight:bold;' : '';
         g.rows.forEach(function (r, ri) {
           grandTotal += parseFloat(r.total) || 0;
           totalQty += parseFloat(r.qty) || 0;
-          var row = '<tr>';
+          var row = '<tr style="' + rowStyle + '">';
           row += '<td>' + (ri === 0 ? docNo : '') + '</td><td>' + (ri === 0 ? g.scNo : '') + '</td>';
           row += '<td class="tl">' + r.productName + '</td><td class="tl">' + r.packing + '</td>';
           row += '<td>' + r.qty + '</td>';
@@ -2808,7 +2799,7 @@
       var cls = mode === 'lh' ? 'doc lh-only' : 'doc';
       if (opts.pdfPage) cls += ' pdf-page';
       var html = '<div class="' + cls + '">';
-      var headerStyle = showFooterOption ? '' : ' style="display:none !important;"';
+      var headerStyle = showFooterOption ? '' : ' style="visibility:hidden !important;"';
       html += '<img class="doc-header-img"' + headerStyle + ' src="' + HDR_IMG + '" alt="TPG Header">';
       html += '<div class="doc-content" style="position:relative;">';
       if (data.version && data.version > 1) {
@@ -2907,9 +2898,9 @@
       document.getElementById('prev-area').innerHTML = buildDoc(c, 'pdf');
       document.getElementById('prev-overlay').style.display = 'block';
     }
-    function savePayData(cid, scNo, field, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; if (!c.paymentData) c.paymentData = {}; if (!c.paymentData[scNo]) c.paymentData[scNo] = {}; c.paymentData[scNo][field] = val; fbSet('contracts', c.id, c); sd(); }
-    function saveComPaid(cid, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; c.comPaid = val; fbSet('contracts', c.id, c); sd(); renderDash(); }
-    function saveComPaidDate(cid, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; c.comPaidDate = val; fbSet('contracts', c.id, c); sd(); }
+    function savePayData(cid, scNo, field, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; if (!c.paymentData) c.paymentData = {}; if (!c.paymentData[scNo]) c.paymentData[scNo] = {}; c.paymentData[scNo][field] = val; fbSet('contracts', c.id, c); }
+    function saveComPaid(cid, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; c.comPaid = val; fbSet('contracts', c.id, c); renderDash(); }
+    function saveComPaidDate(cid, val) { var c = contracts.find(function (x) { return x.id === cid; }); if (!c) return; c.comPaidDate = val; fbSet('contracts', c.id, c); }
     function buildPaymentCell(c, scNo) {
       var pd = (c.paymentData && c.paymentData[scNo]) ? c.paymentData[scNo] : {};
       var type = c.payType || '';
@@ -3019,10 +3010,11 @@
 
       var countryList = [];
       Object.keys(countryContainers).sort().forEach(function (c) {
-        countryList.push('<b>' + c + '</b>: ' + countryContainers[c].toFixed(1) + ' ตู้');
+        var val = Math.round(countryContainers[c] * 10) / 10;
+        countryList.push('<div style="display:inline-flex;align-items:baseline;gap:4px;background:#f0f4f8;border:1px solid #d0e1f9;border-radius:4px;padding:3px 8px;margin:2px 4px 2px 0;"><span style="font-weight:700;color:#1a3a5c;font-size:12px;">' + c + '</span><span style="color:#0d47a1;font-size:13px;font-weight:bold;">' + val + '</span><span style="color:#888;font-size:10px;">ตู้</span></div>');
       });
-      var countryStr = countryList.length ? countryList.join(', ') : 'ไม่มีข้อมูล';
-      var countryHtml = '<div class="stat-card" style="grid-column: span 2"><div class="sn" style="font-size:12px;font-weight:normal;height:auto;line-height:1.6;text-align:left;padding:4px 0">' + countryStr + '</div><div class="sl">Containers by Country</div></div>';
+      var countryStr = countryList.length ? countryList.join('') : '<span style="color:#aaa;font-size:11px">ไม่มีข้อมูล</span>';
+      var countryHtml = '<div class="stat-card" style="grid-column: 1 / -1;text-align:left;padding:12px;"><div class="sl" style="font-weight:bold;margin-bottom:8px;color:#1a3a5c;text-transform:uppercase;">Containers by Country</div><div style="display:flex;flex-wrap:wrap;">' + countryStr + '</div></div>';
 
       var groups = [];
       displayC.forEach(function (c) {
@@ -3087,22 +3079,33 @@
 
         var pdfBtnName = (c.approvalStatus === 'approved') ? 'Signed PDF' : 'Draft PDF';
         var pdfBtnClass = (c.approvalStatus === 'approved') ? 'btn-success' : 'btn-outline';
-        var submitBtn = '';
-        if (c.status !== 'cancelled' && (c.approvalStatus === 'draft' || c.approvalStatus === 'rejected')) {
-          submitBtn = '<button class="btn btn-warning btn-xs" onclick="submitForApproval(\'' + c.id + '\')">Submit</button>';
+        var editBtn = '';
+        if (hasPerm('saleContract') && c.status === 'active') {
+          editBtn = '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + c.id + '\')">Edit</button>';
+        }
+        var rejectBtn = '';
+        var role = getCurrentApprovalRole();
+        if (c.status !== 'cancelled') {
+          if (c.approvalStatus === 'pending_supervisor' || c.approvalStatus === 'pending_manager') {
+            if (role === 'sales' || role === 'supervisor' || role === 'manager' || role === 'admin') {
+              rejectBtn = '<button class="btn btn-danger btn-xs" onclick="rejectContract(\'' + c.id + '\')">Reject</button>';
+            }
+          }
         }
 
         var actCell = '<div style="display:flex;gap:3px;flex-direction:column">' +
           '<button class="btn btn-outline btn-xs" onclick="viewC(\'' + c.id + '\')">View</button>' +
+          editBtn +
           '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + c.id + '\')">' + pdfBtnName + '</button>' +
-          submitBtn +
+          rejectBtn +
           '</div>';
         g.rows.forEach(function (r, i) {
           var isFirst = (i === 0);
           var isExcept = (g.scNo === '555/26');
           var dimStyle = (!isFirst) ? 'color:#aaa;font-size:10px' : '';
           var sepStyle = isFirst ? 'border-top:2px solid #c5d8ec' : '';
-          rows += '<tr style="' + sepStyle + '">';
+          var boldStyle = g.isModified ? 'font-weight:bold;color:#000;' : '';
+          rows += '<tr style="' + sepStyle + boldStyle + '">';
           if (isExcept) {
             rows += '<td style="' + dimStyle + '">' + (isFirst ? '<span class="badge badge-blue" style="font-size:9px">' + g.scNo + '</span>' + appBadge : '<span style="font-size:9px;color:#bbb">↳</span>') + '</td>';
             rows += '<td style="font-size:10px">' + (isFirst ? invCell : '') + '</td>';
@@ -3294,171 +3297,6 @@
         btn.classList.remove('btn-primary');
       }
     }
-    var SHEET_ID = '1hLX9yxpuc6lZ0ELwP2OfKS0kVWgRU2vfqgwpBVJVbVY';
-    var BUYER_GID = '344446381';
-    var PROD_GID = '0';
-    var PAY_TERMS = [
-      '',
-      'By Irrevocable L/C at sight through Krung Thai Bank Public Co., Ltd. Sriracha Branch, for the Account of. Thai Poultry Group Co.,Ltd. 209/55 Moo 3, Bung, Sriracha, Chonburi 20230 (Swift Code: KRTHTHBK )',
-      '30 % after sigining the contract and 70 % before loading 7 days by T.T. Through Krung Thai Bank Public Co., Ltd, Sriracha branch Account No. 208-0-17666-8 Swift Code : KRTHTHBK',
-      '50 % after sigining the contract and 50 % before loading 7 days by T.T. Through Krung Thai Bank Public Co., Ltd, Sriracha branch Account No. 208-0-17666-8 Swift Code : KRTHTHBK'
-    ];
-    function parseCSV(text) {
-      var rows = []; var cur = []; var cell = ''; var inQ = false;
-      for (var i = 0; i < text.length; i++) {
-        var c = text[i];
-        if (inQ) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') { inQ = false; } else cell += c; }
-        else if (c === '"') { inQ = true; }
-        else if (c === ',') { cur.push(cell.trim()); cell = ''; }
-        else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; cur.push(cell.trim()); if (cur.some(function (v) { return v; })) rows.push(cur); cur = []; cell = ''; }
-        else cell += c;
-      }
-      if (cell || cur.length) cur.push(cell.trim()); if (cur.some(function (v) { return v; })) rows.push(cur);
-      return rows;
-    }
-    function parseTSV(text) {
-      return text.trim().split('\n').map(function (r) { return r.split('\t').map(function (c) { return c.trim(); }); });
-    }
-    function importPasteData(type) {
-      var area = document.getElementById(type === 'buyers' ? 'buyer-paste-area' : 'prod-paste-area');
-      var statusEl = document.getElementById(type === 'buyers' ? 'sync-buyer-status' : 'sync-prod-status');
-      var text = area.value.trim();
-      if (!text) { statusEl.textContent = '❌ ไม่พบข้อมูล'; statusEl.style.color = '#c62828'; return; }
-      var rows = parseTSV(text);
-      if (rows.length < 2) { statusEl.textContent = '❌ ข้อมูลไม่ถูกต้อง'; statusEl.style.color = '#c62828'; return; }
-      if (type === 'buyers') {
-        // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
-        var imported = [];
-        for (var i = 1; i < rows.length; i++) {
-          var r = rows[i];
-          if (!r[1] || r[1] === 'COMPANY' || r[0] === '#') continue;
-          var ptIdx = parseInt(r[7]) || 0;
-          imported.push({
-            id: 'b' + Date.now() + i,
-            name: r[1] || '', billAddr: r[2] || '', addr: r[3] || '',
-            contact: r[4] || '', email: r[5] || '', tel: r[6] || '',
-            fax: '', payment: PAY_TERMS[ptIdx] || PAY_TERMS[1], remarks: '', shipTo: ''
-          });
-        }
-        if (!imported.length) { statusEl.textContent = '❌ ไม่พบข้อมูล buyer'; statusEl.style.color = '#c62828'; return; }
-        if (useFirebase && db) {
-          var oldIds = buyers.map(function (b) { return b.id; });
-          fbBatchDel('buyers', oldIds);
-        }
-        buyers = imported; sd(); renderBuyerList(); popCreateDDs(); popBuyerSel('pm-buyer');
-        fbBatchSet('buyers', buyers);
-        statusEl.textContent = '✓ Import ' + imported.length + ' buyers เรียบร้อย';
-        statusEl.style.color = '#2e7d32';
-        area.value = '';
-      } else {
-        // cols: #,P-CODE,CUSTOMER,DESCRIPTION,PACKING SIZE,Std Qty,Measurements,PMK,Category,Yield,Raw Meat,Yield,Raw Meat Use
-        var imported = [];
-        for (var i = 1; i < rows.length; i++) {
-          var r = rows[i];
-          if (!r[1] || r[1] === 'P-CODE' || !r[3]) continue;
-          var custName = (r[2] || '').trim();
-          var b = buyers.find(function (x) { return x.name.toLowerCase() === custName.toLowerCase(); });
-          var yld = parseFloat((r[9] || '').replace(/[^0-9.]/g, '')) || 0;
-          var yld2 = parseFloat((r[11] || '').replace(/[^0-9.]/g, '')) || 0;
-          imported.push({
-            id: 'pr' + Date.now() + i,
-            code: r[1].trim(), name: r[3].trim(), cat: (r[8] || '').trim(),
-            packing: (r[4] || '').trim(), ft40: parseFloat(r[5]) || 24, ft20: 12,
-            raw: (r[10] || '').trim(), yield: yld, yield2: yld2,
-            buyerId: b ? b.id : ''
-          });
-        }
-        if (!imported.length) { statusEl.textContent = '❌ ไม่พบข้อมูล product'; statusEl.style.color = '#c62828'; return; }
-        if (useFirebase && db) {
-          var oldIds = products.map(function (p) { return p.id; });
-          fbBatchDel('products', oldIds);
-        }
-        products = imported; sd(); renderProdList(); popCatSel(); popProdCatFilter();
-        fbBatchSet('products', products);
-        statusEl.textContent = '✓ Import ' + imported.length + ' products เรียบร้อย';
-        statusEl.style.color = '#2e7d32';
-        area.value = '';
-      }
-      setTimeout(function () { statusEl.textContent = ''; }, 5000);
-    }
-    function importFromSheet(type) {
-      var gid = type === 'buyers' ? BUYER_GID : PROD_GID;
-      var statusEl = document.getElementById(type === 'buyers' ? 'sync-buyer-status' : 'sync-prod-status');
-      var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + gid;
-      statusEl.textContent = 'กำลังนำเข้าข้อมูล...'; statusEl.style.color = '#e65100';
-      fetch(url).then(function (r) { return r.text(); }).then(function (csv) {
-        var rows = parseCSV(csv);
-        if (rows.length < 2) { statusEl.textContent = '❌ ไม่พบข้อมูล'; return; }
-        if (type === 'buyers') {
-          // cols: #,COMPANY,Bill Address,ADDRESS,CONTACT PERSON,EMAIL,TELEPHONE NUMBER,AGREED PAYMENT TERM
-          var imported = [];
-          for (var i = 1; i < rows.length; i++) {
-            var r = rows[i];
-            if (!r[1] || r[1] === '#') continue;
-            var ptIdx = parseInt(r[7]) || 0;
-            imported.push({
-              id: 'b' + Date.now() + i,
-              name: (r[1] || '').trim(),
-              billAddr: (r[2] || '').trim(),
-              addr: (r[3] || '').trim(),
-              contact: (r[4] || '').trim(),
-              email: (r[5] || '').trim(),
-              tel: (r[6] || '').trim(),
-              fax: '',
-              payment: PAY_TERMS[ptIdx] || PAY_TERMS[1],
-              remarks: '',
-              shipTo: ''
-            });
-          }
-          if (useFirebase && db) {
-            var oldIds = buyers.map(function (b) { return b.id; });
-            fbBatchDel('buyers', oldIds);
-          }
-          buyers = imported; sd();
-          renderBuyerList(); popCreateDDs(); popBuyerSel('pm-buyer');
-          fbBatchSet('buyers', buyers);
-          statusEl.textContent = '✓ Import ' + imported.length + ' buyers เรียบร้อย';
-          statusEl.style.color = '#2e7d32';
-        } else {
-          // cols: #,P-CODE,CUSTOMER,DESCRIPTION,PACKING SIZE,Standard Quantity,Measurements,PMK,Category,Yield,Raw Meat,Yield,Raw Meat Use
-          var imported = [];
-          for (var i = 1; i < rows.length; i++) {
-            var r = rows[i];
-            if (!r[1] || r[0] === '#' || !r[3]) continue;
-            var custName = (r[2] || '').trim();
-            var b = buyers.find(function (x) { return x.name.toLowerCase() === custName.toLowerCase(); });
-            var yld = parseFloat((r[9] || '').replace('%', '').trim()) || 0;
-            var yld2 = parseFloat((r[11] || '').replace('%', '').trim()) || 0;
-            imported.push({
-              id: 'pr' + Date.now() + i,
-              code: (r[1] || '').trim(),
-              name: (r[3] || '').trim(),
-              cat: (r[8] || '').trim(),
-              packing: (r[4] || '').trim(),
-              ft40: parseFloat(r[5]) || 24,
-              ft20: 12,
-              raw: (r[10] || '').trim(),
-              yield: yld,
-              yield2: yld2,
-              buyerId: b ? b.id : ''
-            });
-          }
-          if (useFirebase && db) {
-            var oldIds = products.map(function (p) { return p.id; });
-            fbBatchDel('products', oldIds);
-          }
-          products = imported; sd();
-          renderProdList(); popCatSel(); popProdCatFilter();
-          fbBatchSet('products', products);
-          statusEl.textContent = '✓ Import ' + imported.length + ' products เรียบร้อย';
-          statusEl.style.color = '#2e7d32';
-        }
-        setTimeout(function () { statusEl.textContent = ''; }, 5000);
-      }).catch(function (e) {
-        statusEl.textContent = '❌ Error: ' + e.message + ' (กรุณาตรวจสอบว่า Sheet เป็น Public)';
-        statusEl.style.color = '#c62828';
-      });
-    }
     function renderBuyerList() {
       var q = (document.getElementById('buyer-search').value || '').toLowerCase();
       var filtered = buyers.filter(function (b) { return !q || b.name.toLowerCase().indexOf(q) >= 0; });
@@ -3487,12 +3325,11 @@
       if (!obj.name) { alert('Please enter company name.'); return; }
       if (id) { var i = buyers.findIndex(function (b) { return b.id === id; }); if (i > -1) buyers[i] = obj; } else buyers.push(obj);
       fbSet('buyers', obj.id, obj);
-      sd(); renderBuyerList(); clearBF(); popCreateDDs();
+      renderBuyerList(); clearBF(); popCreateDDs();
     }
     function editB(id) { var b = buyers.find(function (x) { return x.id === id; }); if (!b) return; document.getElementById('bm-id').value = b.id; document.getElementById('bm-name').value = b.name; document.getElementById('bm-contact').value = b.contact || ''; document.getElementById('bm-billaddr').value = b.billAddr || ''; document.getElementById('bm-addr').value = b.addr; document.getElementById('bm-shipto').value = b.shipTo || ''; document.getElementById('bm-tel').value = b.tel; document.getElementById('bm-fax').value = b.fax || ''; document.getElementById('bm-email').value = b.email || ''; document.getElementById('bm-payment').value = b.payment; document.getElementById('bm-remarks').value = b.remarks || DEFAULT_BUYER_REMARKS; }
-    function delB(id) { if (confirm('Delete buyer?')) { buyers = buyers.filter(function (b) { return b.id !== id; }); fbDel('buyers', id); sd(); renderBuyerList(); } }
+    function delB(id) { if (confirm('Delete buyer?')) { buyers = buyers.filter(function (b) { return b.id !== id; }); fbDel('buyers', id); renderBuyerList(); } }
     function clearBF() { ['bm-id', 'bm-name', 'bm-contact', 'bm-billaddr', 'bm-addr', 'bm-shipto', 'bm-tel', 'bm-fax', 'bm-email', 'bm-payment', 'bm-remarks'].forEach(function (i) { var el = document.getElementById(i); if (el) el.value = ''; }); }
-    function getUniqueCategories() { var s = {}; products.forEach(function (p) { if (p.cat) s[p.cat] = 1; }); return Object.keys(s).sort(); }
     function popBuyerSel(id) { var sel = document.getElementById(id); if (!sel) return; var cv = sel.value; sel.innerHTML = '<option value="">All</option>'; buyers.forEach(function (b) { var o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); }); if (cv) sel.value = cv; }
     function popCatSel() {
       var sel = document.getElementById('pm-cat-sel'); if (!sel) return; var cv = sel.value;
@@ -3542,7 +3379,7 @@
         categories.push(obj);
       }
       fbSet('categories', obj.id, obj);
-      sd();
+      
       renderCatList();
       clearCatForm();
       popCatSel();
@@ -3562,7 +3399,7 @@
       if (confirm('Delete category "' + c.name + '"?')) {
         categories = categories.filter(function (x) { return x.id !== id; });
         fbDel('categories', id);
-        sd();
+        
         renderCatList();
         popCatSel();
         popProdCatFilter();
@@ -3607,10 +3444,10 @@
       if (!obj.name) { alert('Please enter product name.'); return; }
       if (id) { var i = products.findIndex(function (p) { return p.id === id; }); if (i > -1) products[i] = obj; } else products.push(obj);
       fbSet('products', obj.id, obj);
-      sd(); renderProdList(); clearPF(); popCatSel(); popProdCatFilter(); popCreateDDs();
+      renderProdList(); clearPF(); popCatSel(); popProdCatFilter(); popCreateDDs();
     }
     function editP(id) { var p = products.find(function (x) { return x.id === id; }); if (!p) return; document.getElementById('pm-id').value = p.id; document.getElementById('pm-code').value = p.code || ''; document.getElementById('pm-name').value = p.name; document.getElementById('pm-cat-sel').value = p.cat || ''; document.getElementById('pm-packing').value = p.packing || ''; document.getElementById('pm-40').value = p.ft40 || ''; document.getElementById('pm-20').value = p.ft20 || ''; document.getElementById('pm-raw').value = p.raw || ''; document.getElementById('pm-yield').value = p.yield || ''; document.getElementById('pm-yield2').value = p.yield2 || ''; document.getElementById('pm-buyer').value = p.buyerId || ''; }
-    function delP(id) { if (confirm('Delete product?')) { products = products.filter(function (p) { return p.id !== id; }); fbDel('products', id); sd(); renderProdList(); } }
+    function delP(id) { if (confirm('Delete product?')) { products = products.filter(function (p) { return p.id !== id; }); fbDel('products', id); renderProdList(); } }
     function clearPF() { ['pm-id', 'pm-code', 'pm-name', 'pm-packing', 'pm-40', 'pm-20', 'pm-yield', 'pm-yield2'].forEach(function (i) { document.getElementById(i).value = ''; }); document.getElementById('pm-raw').value = ''; document.getElementById('pm-buyer').value = ''; document.getElementById('pm-cat-sel').value = ''; }
     function renderPortList() {
       if (!ports.length) { document.getElementById('port-list').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa">No ports.</div>'; return; }
@@ -3621,9 +3458,9 @@
       });
       document.getElementById('port-list').innerHTML = html;
     }
-    function savePort() { var id = document.getElementById('port-id').value; var name = document.getElementById('port-name').value.trim(); var country = document.getElementById('port-country').value.trim(); if (!name) { alert('Enter port name.'); return; } var obj = { id: id || 'prt' + Date.now(), name: name, country: country }; if (id) { var i = ports.findIndex(function (p) { return p.id === id; }); if (i > -1) ports[i] = obj; } else ports.push(obj); fbSet('ports', obj.id, obj); sd(); renderPortList(); clearPortF(); }
+    function savePort() { var id = document.getElementById('port-id').value; var name = document.getElementById('port-name').value.trim(); var country = document.getElementById('port-country').value.trim(); if (!name) { alert('Enter port name.'); return; } var obj = { id: id || 'prt' + Date.now(), name: name, country: country }; if (id) { var i = ports.findIndex(function (p) { return p.id === id; }); if (i > -1) ports[i] = obj; } else ports.push(obj); fbSet('ports', obj.id, obj); renderPortList(); clearPortF(); }
     function editPort(id) { var p = ports.find(function (x) { return x.id === id; }); if (!p) return; document.getElementById('port-id').value = p.id; document.getElementById('port-name').value = p.name; document.getElementById('port-country').value = p.country || ''; }
-    function delPort(id) { if (confirm('Delete port?')) { ports = ports.filter(function (p) { return p.id !== id; }); fbDel('ports', id); sd(); renderPortList(); } }
+    function delPort(id) { if (confirm('Delete port?')) { ports = ports.filter(function (p) { return p.id !== id; }); fbDel('ports', id); renderPortList(); } }
     function clearPortF() { document.getElementById('port-id').value = ''; document.getElementById('port-name').value = ''; document.getElementById('port-country').value = ''; }
     function renderIncotermList() {
       if (!incoterms.length) { document.getElementById('incoterm-list').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa">No incoterms.</div>'; return; }
@@ -3642,10 +3479,10 @@
       if (!code) { alert('Enter incoterm.'); return; }
       var obj = { id: id || 'inco-' + code.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), code: code, desc: desc };
       if (id) { var i = incoterms.findIndex(function (x) { return x.id === id; }); if (i > -1) incoterms[i] = obj; } else incoterms.push(obj);
-      fbSet('incoterms', obj.id, obj); sd(); renderIncotermList(); popIncotermSel(); clearIncotermF();
+      fbSet('incoterms', obj.id, obj); renderIncotermList(); popIncotermSel(); clearIncotermF();
     }
     function editIncoterm(id) { var x = incoterms.find(function (v) { return v.id === id; }); if (!x) return; document.getElementById('inco-id').value = x.id; document.getElementById('inco-code').value = x.code || ''; document.getElementById('inco-desc').value = x.desc || ''; }
-    function delIncoterm(id) { if (confirm('Delete incoterm?')) { incoterms = incoterms.filter(function (x) { return x.id !== id; }); fbDel('incoterms', id); sd(); renderIncotermList(); popIncotermSel(); } }
+    function delIncoterm(id) { if (confirm('Delete incoterm?')) { incoterms = incoterms.filter(function (x) { return x.id !== id; }); fbDel('incoterms', id); renderIncotermList(); popIncotermSel(); } }
     function clearIncotermF() { document.getElementById('inco-id').value = ''; document.getElementById('inco-code').value = ''; document.getElementById('inco-desc').value = ''; }
     function renderSOList() {
       var sf = document.getElementById('so-fil-status').value || '';
@@ -3716,8 +3553,8 @@
       document.getElementById('so-overlay').style.display = 'block';
       var chk = document.getElementById('chk-so-show-footer'); if (chk) chk.checked = showFooterOption;
     }
-    function confirmSendSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; so.status = 'sent_to_production'; so.sentAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); sd(); document.getElementById('so-overlay').style.display = 'none'; renderSOList(); updateProductionBadge(); alert('S/O ' + so.soNo + ' sent to Production!'); }
-    function acknowledgeSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; if (!confirm('Approve / Acknowledge S/O ' + so.soNo + '?')) return; so.status = 'acknowledged'; so.acknowledgedAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); sd(); renderSOList(); updateProductionBadge(); }
+    function confirmSendSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; so.status = 'sent_to_production'; so.sentAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); document.getElementById('so-overlay').style.display = 'none'; renderSOList(); updateProductionBadge(); alert('S/O ' + so.soNo + ' sent to Production!'); }
+    function acknowledgeSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; if (!confirm('Approve / Acknowledge S/O ' + so.soNo + '?')) return; so.status = 'acknowledged'; so.acknowledgedAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); renderSOList(); updateProductionBadge(); }
     function viewSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; document.getElementById('so-prev-area').innerHTML = buildSODoc(so); document.getElementById('so-overlay').style.display = 'block'; var chk = document.getElementById('chk-so-show-footer'); if (chk) chk.checked = showFooterOption; }
     function buildSODoc(so) {
       var totalQty = so.rows.reduce(function (s, r) { return s + (parseFloat(r.qty) || 0); }, 0);
@@ -3790,7 +3627,7 @@
       return html;
     }
     function printSO() { var pa = document.getElementById('print-area'); pa.style.display = 'block'; pa.innerHTML = document.getElementById('so-prev-area').innerHTML; window.print(); setTimeout(function () { pa.style.display = 'none'; }, 1000); }
-    function saveSORemarks(id, val) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; so.remarks = val; fbSet('saleOrders', so.id, so); sd(); }
+    function saveSORemarks(id, val) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; so.remarks = val; fbSet('saleOrders', so.id, so); }
     function isComplete(e) { if (!e.etd) return false; var today = new Date(); today.setHours(0, 0, 0, 0); return new Date(e.etd) < today; }
     function renderSTSummary() {
       var curYr = new Date().getFullYear().toString();
@@ -3867,11 +3704,11 @@
       if (!obj.invNo) { alert('Please enter Invoice No.'); return; }
       if (id) { var i = shipEntries.findIndex(function (e) { return e.id === id; }); if (i > -1) shipEntries[i] = obj; } else shipEntries.unshift(obj);
       fbSet('shipEntries', obj.id, obj);
-      sd(); clearSTForm(); initShipTrack();
+      clearSTForm(); initShipTrack();
     }
     function clearSTForm() { ['st-ref', 'st-customer', 'st-port', 'st-finish', 'st-lab', 'st-cy', 'st-return', 'st-closing-date', 'st-etd', 'st-eta', 'st-agent', 'st-vessel', 'st-container', 'st-note'].forEach(function (i) { var el = document.getElementById(i); if (el) el.value = ''; }); document.getElementById('st-closing-time').value = '23:59'; document.getElementById('st-freight').value = ''; document.getElementById('st-sc').value = ''; document.getElementById('st-editing-id').value = ''; document.getElementById('st-panel-title').textContent = 'New Invoice / Container'; document.getElementById('st-inv').value = nextInvNo(); }
     function editSTEntry(id) { var e = shipEntries.find(function (x) { return x.id === id; }); if (!e) return; document.getElementById('st-editing-id').value = e.id; document.getElementById('st-inv').value = e.invNo || ''; document.getElementById('st-ref').value = e.ref || ''; document.getElementById('st-sc').value = e.scNo || ''; onSTScChange(); document.getElementById('st-customer').value = e.customer || ''; document.getElementById('st-port').value = e.port || ''; document.getElementById('st-finish').value = e.finishDate || ''; document.getElementById('st-lab').value = e.lab || ''; document.getElementById('st-cy').value = e.cy || ''; document.getElementById('st-return').value = e.returnDate || ''; if (e.closing) { var p = e.closing.split(' '); document.getElementById('st-closing-date').value = p[0] || ''; document.getElementById('st-closing-time').value = p[1] || '23:59'; } document.getElementById('st-etd').value = e.etd || ''; document.getElementById('st-eta').value = e.eta || ''; document.getElementById('st-agent').value = e.agent || ''; document.getElementById('st-vessel').value = e.vessel || ''; document.getElementById('st-freight').value = e.freight || ''; document.getElementById('st-container').value = e.containerNo || ''; document.getElementById('st-note').value = e.note || ''; document.getElementById('st-panel-title').textContent = 'Edit: ' + e.invNo; document.getElementById('st-add-panel').scrollIntoView({ behavior: 'smooth' }); document.getElementById('st-panel-body').style.display = ''; }
-    function delSTEntry(id) { if (!confirm('Delete?')) return; shipEntries = shipEntries.filter(function (e) { return e.id !== id; }); fbDel('shipEntries', id); sd(); initShipTrack(); }
+    function delSTEntry(id) { if (!confirm('Delete?')) return; shipEntries = shipEntries.filter(function (e) { return e.id !== id; }); fbDel('shipEntries', id); initShipTrack(); }
     function showNote(txt, id, evt) {
       if (evt) evt.stopPropagation();
       var popup = document.getElementById('note-popup');
@@ -3890,7 +3727,7 @@
           if (newNote === null) return;
           entry.note = newNote.trim();
           fbSet('shipEntries', entry.id, entry);
-          sd();
+          
           popup.style.display = 'none';
           renderSTList(true);
         };
@@ -3905,7 +3742,7 @@
       if (newNote === null) return;
       entry.note = newNote.trim();
       fbSet('shipEntries', entry.id, entry);
-      sd();
+      
       renderSTList(true);
     }
 
@@ -4208,7 +4045,7 @@
         html += '<div class="rm-month-header"><span>' + mo + '</span><span style="font-size:11px;font-weight:400">' + d.totalQty.toFixed(2) + ' MT product > <b>' + totalRaw.toFixed(2) + ' MT raw</b></span></div>';
         html += '<div style="overflow-x:auto;padding:10px 14px">';
         html += '<table class="dt" style="font-size:11px"><thead><tr>';
-        html += '<th>Category</th><th>Raw Mat.</th><th>Product QTY (MT)</th><th>Raw Material Need (MT)</th>';
+        html += '<th style="width:30%">Category</th><th style="width:20%">Raw Mat.</th><th style="text-align:right;width:25%">Product QTY (MT)</th><th style="text-align:right;width:25%">Raw Material Need (MT)</th>';
         html += '</tr></thead><tbody>';
         cats.forEach(function (cat) {
           var bc = cat.raw === 'BIL' ? 'badge-blue' : cat.raw === 'BB' ? 'badge-purple' : cat.raw === 'Wing' || cat.raw === 'BL' ? 'badge-amber' : 'badge-gray';
@@ -4227,7 +4064,7 @@
         if (showDetail && d.rows.length) {
           html += '<div style="padding:0 14px 10px;overflow-x:auto">';
           html += '<table class="dt" style="font-size:10px"><thead><tr>';
-          html += '<th>SC No.</th><th>Product</th><th>Buyer</th><th>Category</th><th>QTY</th><th>YC%</th><th>YR%</th><th>Raw Need (MT)</th>';
+          html += '<th>SC No.</th><th>Product</th><th>Buyer</th><th>Category</th><th style="text-align:right">QTY</th><th style="text-align:right">YC%</th><th style="text-align:right">YR%</th><th style="text-align:right">Raw Need (MT)</th>';
           html += '</tr></thead><tbody>';
           d.rows.forEach(function (r) {
             html += '<tr>';
@@ -4264,9 +4101,9 @@
       });
       document.getElementById('pt-list').innerHTML = html;
     }
-    function savePT() { var id = document.getElementById('pt-id').value; var obj = { id: id || 'pay' + Date.now(), name: document.getElementById('pt-name').value.trim(), type: document.getElementById('pt-type').value, text: document.getElementById('pt-text').value.trim() }; if (!obj.name || !obj.text) { alert('Please fill all fields.'); return; } if (id) { var i = payTerms.findIndex(function (p) { return p.id === id; }); if (i > -1) payTerms[i] = obj; } else payTerms.push(obj); fbSet('payTerms', obj.id, obj); sd(); renderPTList(); popPtSel('bm-ptsel'); }
+    function savePT() { var id = document.getElementById('pt-id').value; var obj = { id: id || 'pay' + Date.now(), name: document.getElementById('pt-name').value.trim(), type: document.getElementById('pt-type').value, text: document.getElementById('pt-text').value.trim() }; if (!obj.name || !obj.text) { alert('Please fill all fields.'); return; } if (id) { var i = payTerms.findIndex(function (p) { return p.id === id; }); if (i > -1) payTerms[i] = obj; } else payTerms.push(obj); fbSet('payTerms', obj.id, obj); renderPTList(); popPtSel('bm-ptsel'); }
     function editPT(id) { var p = payTerms.find(function (x) { return x.id === id; }); if (!p) return; document.getElementById('pt-id').value = p.id; document.getElementById('pt-name').value = p.name; document.getElementById('pt-type').value = p.type || ''; document.getElementById('pt-text').value = p.text; }
-    function delPT(id) { if (confirm('Delete?')) { payTerms = payTerms.filter(function (p) { return p.id !== id; }); fbDel('payTerms', id); sd(); renderPTList(); } }
+    function delPT(id) { if (confirm('Delete?')) { payTerms = payTerms.filter(function (p) { return p.id !== id; }); fbDel('payTerms', id); renderPTList(); } }
     function clearPTF() { ['pt-id', 'pt-name', 'pt-text'].forEach(function (i) { document.getElementById(i).value = ''; }); document.getElementById('pt-type').value = ''; }
 
     function showAppModal(opts) {
@@ -4401,7 +4238,7 @@
       if (confirm('Submit Sales Contract ' + c.groups.map(function (g) { return g.scNo; }).join(', ') + ' for approval?')) {
         c.approvalStatus = 'pending_supervisor';
         fbSet('contracts', c.id, c);
-        sd();
+        
         updateApprovalBadge();
         if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
         if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
@@ -4422,8 +4259,9 @@
           c.approvalStatus = 'pending_manager';
           c.supervisorApproveDate = new Date().toISOString().split('T')[0];
           fbSet('contracts', c.id, c);
-          sd();
-          renderApprovalPage();
+          
+          if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
+          if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
           updateApprovalBadge();
           await showAppAlert('Approved', 'Contract approved by Supervisor and forwarded to Manager.', 'success');
         }
@@ -4436,8 +4274,9 @@
           c.approvalStatus = 'approved';
           c.managerApproveDate = new Date().toISOString().split('T')[0];
           fbSet('contracts', c.id, c);
-          sd();
-          renderApprovalPage();
+          
+          if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
+          if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
           updateApprovalBadge();
           await showAppAlert('Fully Approved', 'Contract fully approved. Digital signatures have been applied.', 'success');
         }
@@ -4464,8 +4303,9 @@
       c.rejectReason = reason;
       c.rejectedAt = new Date().toISOString();
       fbSet('contracts', c.id, c);
-      sd();
-      renderApprovalPage();
+      
+      if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
+      if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
       updateApprovalBadge();
       await showAppAlert('Rejected', 'Contract rejected and returned to initiator.', 'success');
     }
@@ -4541,6 +4381,10 @@
         if (c.approvalStatus === 'draft' || c.approvalStatus === 'rejected' || !c.approvalStatus) {
           submitBtn = '<button class="btn btn-warning btn-xs" onclick="submitForApproval(\'' + c.id + '\')" style="margin-right:4px">Submit</button>';
         }
+        var editBtn = '';
+        if (hasPerm('saleContract') && c.status === 'active') {
+          editBtn = '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + c.id + '\')" style="margin-right:4px">Edit</button>';
+        }
 
         allHtml += '<tr>';
         allHtml += '<td><span class="badge badge-blue">' + scNos + '</span></td>';
@@ -4552,6 +4396,7 @@
         allHtml += '<td style="font-size:10px">' + progress + '</td>';
         allHtml += '<td>';
         allHtml += '<button class="btn btn-outline btn-xs" onclick="viewC(\'' + c.id + '\')" style="margin-right:4px">View</button>';
+        allHtml += editBtn;
         allHtml += submitBtn;
         allHtml += '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + c.id + '\')">' + pdfBtnName + '</button>';
         allHtml += '</td>';
@@ -4713,7 +4558,7 @@
         so.status = 'acknowledged';
         so.acknowledgedAt = new Date().toISOString();
         fbSet('saleOrders', so.id, so);
-        sd();
+        
         renderProductionPage();
         updateProductionBadge();
         await showAppAlert('Acknowledged', 'S/O acknowledged successfully.', 'success');
@@ -4744,7 +4589,7 @@
       so.rejectReason = reason;
       so.remarks = '[Rejected by Production: ' + reason + '] ' + (so.remarks || '');
       fbSet('saleOrders', so.id, so);
-      sd();
+      
       renderProductionPage();
       updateProductionBadge();
       await showAppAlert('Rejected', 'S/O rejected and returned to draft.', 'success');
@@ -4769,3 +4614,6 @@
 </body>
 
 </html>
+
+
+
