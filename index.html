@@ -432,6 +432,67 @@
       background: #f9f9f9
     }
 
+    /* --- Multi-Select (Buyer assign) --- */
+    .multi-sel {
+      position: relative;
+      user-select: none
+    }
+
+    .multi-sel-trigger {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      padding: 5px 7px;
+      font-size: 12px;
+      background: #fff;
+      cursor: pointer;
+      min-height: 29px;
+      color: #333
+    }
+
+    .multi-sel-trigger .ms-arrow {
+      font-size: 9px;
+      color: #888
+    }
+
+    .multi-sel-dd {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 500;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08)
+    }
+
+    .ms-opt {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      border-bottom: 1px solid #f5f5f5
+    }
+
+    .ms-opt:hover {
+      background: #e8f0f8
+    }
+
+    .ms-opt input {
+      width: 13px;
+      height: 13px;
+      accent-color: #1a3a5c;
+      flex-shrink: 0
+    }
+
     .overlay {
       display: none;
       position: fixed;
@@ -1274,6 +1335,7 @@
                 <option value="sent_to_production">Sent to Production</option>
                 <option value="acknowledged">Acknowledged</option>
                 <option value="draft">Draft</option>
+                <option value="rejected">Rejected</option>
               </select>
               <input id="so-fil-q" placeholder="Search SO / Buyer..." oninput="renderSOList()" style="width:180px">
               <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input
@@ -1528,7 +1590,7 @@
                   <th>Products</th>
                   <th>Total QTY</th>
                   <th>Status</th>
-                  <th>Acknowledged At</th>
+                  <th>Processed At</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -1654,10 +1716,18 @@
             </div>
             <div style="font-size:10px;color:#888;margin-bottom:6px">Raw Need = Load / PY% / YR%</div>
             <div class="form-row">
-              <div class="fg"><label>Assign to Buyer</label><select id="pm-buyer">
-                  <option value="">All</option>
-                </select></div>
-            </div>
+                          <div class="fg"><label>Assign to Buyer</label>
+                            <div class="multi-sel" id="pm-buyer-wrap">
+                              <div class="multi-sel-trigger" onclick="toggleBuyerDD()">
+                                <span id="pm-buyer-lbl">All</span>
+                                <span class="ms-arrow">&#9660;</span>
+                              </div>
+                              <div class="multi-sel-dd" id="pm-buyer-dd" style="display:none">
+                                <label class="ms-opt"><input type="checkbox" value="" onchange="onBuyerMSClick(this)"> All</label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
             <div class="actions"><button class="btn btn-primary" onclick="saveProd()">Save</button><button
                 class="btn btn-outline" onclick="clearPF()">Clear</button></div>
           </div>
@@ -2334,7 +2404,7 @@
       if (el) el.classList.add('active');
       if (p === 'dashboard') renderDash();
       if (p === 'buyers') { renderBuyerList(); popPtSel('bm-ptsel'); }
-      if (p === 'products') { renderProdList(); popBuyerSel('pm-buyer'); popCatSel(); popProdCatFilter(); renderCatList(); }
+      if (p === 'products') { renderProdList(); popBuyerMultiSelect(); popCatSel(); popProdCatFilter(); renderCatList(); }
       if (p === 'ports') renderPortList();
       if (p === 'incoterms') renderIncotermList();
       if (p === 'payments') renderPTList();
@@ -2402,8 +2472,13 @@
       } else box.style.display = 'none';
     }
     function fillPS(sel, buyerId) {
-      sel.innerHTML = '<option value="">Product</option>';
-      var list = buyerId ? products.filter(function (p) { return p.buyerId === buyerId || !p.buyerId || p.buyerId === ''; }) : products;
+          sel.innerHTML = '<option value="">Product</option>';
+          var list = buyerId 
+            ? products.filter(function (p) { 
+                var ids = normBuyerIds(p.buyerIds || p.buyerId);
+                return ids.length === 0 || ids.indexOf(buyerId) >= 0; 
+              }) 
+            : products;
       list.forEach(function (p) { var o = document.createElement('option'); o.value = p.id; o.textContent = '[' + p.code + '] ' + p.name; sel.appendChild(o); });
     }
     function getAllUsedScNos(exceptId) {
@@ -2619,6 +2694,44 @@
         fbSet('saleOrders', newSO.id, newSO);
       });
     }
+    async function cancelContractGroup(id, scNo) {
+      var c = contracts.find(function (x) { return x.id === id; });
+      if (!c) return;
+      var reason = await showAppPrompt('Cancel SC ' + scNo + '?', 'This will mark SC ' + scNo + ' as Cancelled. It will be removed from summaries.', {
+        placeholder: 'Reason (optional)',
+        required: false,
+        confirmText: 'Cancel SC'
+      });
+      if (reason === false) return;
+
+      var g = c.groups.find(function (x) { return x.scNo === scNo; });
+      if (g) {
+        g.isCancelled = true;
+        g.cancelReason = reason || '';
+        g.cancelledAt = new Date().toISOString();
+      }
+
+      var allCancelled = c.groups.every(function (x) { return x.isCancelled; });
+      if (allCancelled) {
+        c.status = 'cancelled';
+        c.cancelReason = 'All SCs cancelled';
+        c.cancelledAt = new Date().toISOString();
+      }
+
+      fbSet('contracts', c.id, c);
+
+      // Also cancel related Sale Order if it exists
+      var so = saleOrders.find(function (x) { return x.soNo === scNo; });
+      if (so && so.status !== 'cancelled') {
+        so.status = 'cancelled';
+        so.cancelReason = reason || 'SC Cancelled';
+        fbSet('saleOrders', so.id, so);
+      }
+
+      renderDash();
+      await showAppAlert('SC Cancelled', 'SC ' + scNo + ' has been marked as Cancelled.', 'success');
+    }
+
     async function cancelContract(id) {
       var c = contracts.find(function (x) { return x.id === id; });
       if (!c) return;
@@ -2749,6 +2862,7 @@
     function getDocRows(data) {
       var rows = []; var grandTotal = 0; var totalQty = 0; var docNo = 0;
       data.groups.forEach(function (g) {
+        if (g.isCancelled) return;
         docNo++;
         var rowStyle = g.isModified ? 'font-weight:bold;' : '';
         g.rows.forEach(function (r, ri) {
@@ -2980,6 +3094,7 @@
       latestC.forEach(function (c) {
         if (bf && c.buyerId !== bf) return;
         c.groups.forEach(function (g) {
+          if (!showCancelled && g.isCancelled) return;
           if (mf && g.shipmentMonth !== mf) return;
           if (yf && (g.shipmentMonth || '').indexOf(yf) < 0) return;
           var ship = shipEntries.find(function (e) { return e.scNo === g.scNo; });
@@ -2998,20 +3113,22 @@
           // Country containers breakdown
           var portObj = ports.find(function (p) { return p.name.toUpperCase() === (g.port || '').toUpperCase(); });
           var country = portObj ? portObj.country.trim().toUpperCase() : 'OTHER';
-          g.rows.forEach(function (r) {
-            var qty = parseFloat(r.qty) || 0;
-            var prod = products.find(function (p) { return p.id === r.productId; }) || {};
-            var ft40 = parseFloat(prod.ft40) || 24;
-            var cons = qty / ft40;
-            countryContainers[country] = (countryContainers[country] || 0) + cons;
-          });
+          if (g.scNo) {
+            if (!countryContainers[country]) {
+              countryContainers[country] = { containers: 0, qty: 0 };
+            }
+            countryContainers[country].containers += 1;
+            countryContainers[country].qty += tQty;
+          }
         });
       });
 
       var countryList = [];
       Object.keys(countryContainers).sort().forEach(function (c) {
-        var val = Math.round(countryContainers[c] * 10) / 10;
-        countryList.push('<div style="display:inline-flex;align-items:baseline;gap:4px;background:#f0f4f8;border:1px solid #d0e1f9;border-radius:4px;padding:3px 8px;margin:2px 4px 2px 0;"><span style="font-weight:700;color:#1a3a5c;font-size:12px;">' + c + '</span><span style="color:#0d47a1;font-size:13px;font-weight:bold;">' + val + '</span><span style="color:#888;font-size:10px;">ตู้</span></div>');
+        var info = countryContainers[c];
+        var val = info.containers;
+        var qtyStr = info.qty.toFixed(2);
+        countryList.push('<div style="display:inline-flex;align-items:baseline;gap:4px;background:#f0f4f8;border:1px solid #d0e1f9;border-radius:4px;padding:3px 8px;margin:2px 4px 2px 0;"><span style="font-weight:700;color:#1a3a5c;font-size:12px;">' + c + '</span><span style="color:#0d47a1;font-size:13px;font-weight:bold;">' + val + '</span><span style="color:#888;font-size:10px;">ตู้ =</span><span style="color:#2e7d32;font-size:13px;font-weight:bold;">' + qtyStr + '</span><span style="color:#888;font-size:10px;">MT</span></div>');
       });
       var countryStr = countryList.length ? countryList.join('') : '<span style="color:#aaa;font-size:11px">ไม่มีข้อมูล</span>';
       var countryHtml = '<div class="stat-card" style="grid-column: 1 / -1;text-align:left;padding:12px;"><div class="sl" style="font-weight:bold;margin-bottom:8px;color:#1a3a5c;text-transform:uppercase;">Containers by Country</div><div style="display:flex;flex-wrap:wrap;">' + countryStr + '</div></div>';
@@ -3020,6 +3137,7 @@
       displayC.forEach(function (c) {
         if (bf && c.buyerId !== bf) return;
         c.groups.forEach(function (g) {
+          if (!showCancelled && g.isCancelled) return;
           if (mf && g.shipmentMonth !== mf) return;
           if (yf && (g.shipmentMonth || '').indexOf(yf) < 0) return;
           var ship = shipEntries.find(function (e) { return e.scNo === g.scNo; });
@@ -3080,8 +3198,12 @@
         var pdfBtnName = (c.approvalStatus === 'approved') ? 'Signed PDF' : 'Draft PDF';
         var pdfBtnClass = (c.approvalStatus === 'approved') ? 'btn-success' : 'btn-outline';
         var editBtn = '';
+        var cancelSCBtn = '';
         if (hasPerm('saleContract') && c.status === 'active') {
           editBtn = '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + c.id + '\')">Edit</button>';
+          if (!g.isCancelled) {
+            cancelSCBtn = '<button class="btn btn-danger btn-xs" onclick="cancelContractGroup(\'' + c.id + '\', \'' + g.scNo + '\')">Cancel SC</button>';
+          }
         }
         var rejectBtn = '';
         var role = getCurrentApprovalRole();
@@ -3096,6 +3218,7 @@
         var actCell = '<div style="display:flex;gap:3px;flex-direction:column">' +
           '<button class="btn btn-outline btn-xs" onclick="viewC(\'' + c.id + '\')">View</button>' +
           editBtn +
+          cancelSCBtn +
           '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + c.id + '\')">' + pdfBtnName + '</button>' +
           rejectBtn +
           '</div>';
@@ -3331,6 +3454,79 @@
     function delB(id) { if (confirm('Delete buyer?')) { buyers = buyers.filter(function (b) { return b.id !== id; }); fbDel('buyers', id); renderBuyerList(); } }
     function clearBF() { ['bm-id', 'bm-name', 'bm-contact', 'bm-billaddr', 'bm-addr', 'bm-shipto', 'bm-tel', 'bm-fax', 'bm-email', 'bm-payment', 'bm-remarks'].forEach(function (i) { var el = document.getElementById(i); if (el) el.value = ''; }); }
     function popBuyerSel(id) { var sel = document.getElementById(id); if (!sel) return; var cv = sel.value; sel.innerHTML = '<option value="">All</option>'; buyers.forEach(function (b) { var o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); }); if (cv) sel.value = cv; }
+    // --- Multi-Select Buyer for Product Master ---
+    function popBuyerMultiSelect() {
+      var dd = document.getElementById('pm-buyer-dd'); if (!dd) return;
+      dd.innerHTML = '<label class="ms-opt"><input type="checkbox" value="" onchange="onBuyerMSClick(this)"> All</label>';
+      buyers.forEach(function (b) {
+        var l = document.createElement('label'); l.className = 'ms-opt';
+        l.innerHTML = '<input type="checkbox" value="' + b.id + '" onchange="onBuyerMSClick(this)"> ' + b.name;
+        dd.appendChild(l);
+      });
+      document.getElementById('pm-buyer-lbl').textContent = 'All';
+    }
+    function toggleBuyerDD() {
+          var dd = document.getElementById('pm-buyer-dd'); if (!dd) return;
+          var wasHidden = dd.style.display === 'none';
+          dd.style.display = wasHidden ? 'block' : 'none';
+        }
+        // Close buyer dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+          var wrap = document.getElementById('pm-buyer-wrap'); var dd = document.getElementById('pm-buyer-dd');
+          if (wrap && dd && !wrap.contains(e.target)) dd.style.display = 'none';
+        });
+    function onBuyerMSClick(cb) {
+      var dd = document.getElementById('pm-buyer-dd'); if (!dd) return;
+      var all = dd.querySelectorAll('input[type="checkbox"]');
+      if (cb.value === '') {
+        // "All" checkbox — toggle all
+        for (var i = 1; i < all.length; i++) all[i].checked = cb.checked;
+      } else {
+        // Individual — update "All" checkbox
+        var anyUnchecked = false;
+        for (var i = 1; i < all.length; i++) { if (!all[i].checked) { anyUnchecked = true; break; } }
+        all[0].checked = !anyUnchecked;
+      }
+      updateBuyerLabel();
+    }
+    function updateBuyerLabel() {
+      var dd = document.getElementById('pm-buyer-dd'); if (!dd) return;
+      var all = dd.querySelectorAll('input[type="checkbox"]');
+      var names = [];
+      for (var i = 1; i < all.length; i++) {
+        if (all[i].checked) names.push(all[i].parentElement.textContent.replace(all[i].textContent, '').trim());
+      }
+      var lbl = document.getElementById('pm-buyer-lbl');
+      if (names.length === 0 || all[0].checked) lbl.textContent = 'All';
+      else if (names.length <= 2) lbl.textContent = names.join(', ');
+      else lbl.textContent = names.length + ' buyers selected';
+    }
+    function getSelectedBuyerIds() {
+      var dd = document.getElementById('pm-buyer-dd'); if (!dd) return [];
+      var all = dd.querySelectorAll('input[type="checkbox"]');
+      if (all[0].checked) return []; // "All" = no filter → empty array
+      var ids = [];
+      for (var i = 1; i < all.length; i++) { if (all[i].checked) ids.push(all[i].value); }
+      return ids;
+    }
+    function setSelectedBuyerIds(ids) {
+      var dd = document.getElementById('pm-buyer-dd'); if (!dd) return;
+      var all = dd.querySelectorAll('input[type="checkbox"]');
+      if (!ids || ids.length === 0) {
+        // "All" — check the All checkbox, uncheck all individual
+        for (var i = 0; i < all.length; i++) all[i].checked = (i === 0);
+      } else {
+        all[0].checked = false;
+        for (var i = 1; i < all.length; i++) all[i].checked = (ids.indexOf(all[i].value) >= 0);
+      }
+      updateBuyerLabel();
+    }
+    // Normalize old single-string buyerId to new array format
+    function normBuyerIds(buyerId) {
+      if (!buyerId || buyerId === '') return [];
+      if (Array.isArray(buyerId)) return buyerId;
+      return [buyerId]; // legacy single string
+    }
     function popCatSel() {
       var sel = document.getElementById('pm-cat-sel'); if (!sel) return; var cv = sel.value;
       sel.innerHTML = '<option value="">Select Category</option>';
@@ -3419,14 +3615,17 @@
       if (!filtered.length) { document.getElementById('prod-list').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa">No products.</div>'; return; }
       var html = '';
       filtered.forEach(function (p) {
-        var b = buyers.find(function (x) { return x.id === p.buyerId; });
-        var hasYield = p.yield && p.yield2;
-        html += '<div class="mitem"><div>';
-        html += '<b style="font-size:11px">[' + p.code + '] ' + p.name + '</b>';
-        html += '<div style="font-size:10px;color:#888;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px">';
-        if (p.cat) html += '<span>' + p.cat + '</span>';
-        if (p.raw) html += '<span>- ' + p.raw + '</span>';
-        if (b) html += '<span>- ' + b.name + '</span>';
+              var bids = normBuyerIds(p.buyerIds || p.buyerId);
+              var hasYield = p.yield && p.yield2;
+              html += '<div class="mitem"><div>';
+              html += '<b style="font-size:11px">[' + p.code + '] ' + p.name + '</b>';
+              html += '<div style="font-size:10px;color:#888;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px">';
+              if (p.cat) html += '<span>' + p.cat + '</span>';
+              if (p.raw) html += '<span>- ' + p.raw + '</span>';
+              if (bids.length > 0) {
+                var bnames = []; bids.forEach(function (bid) { var b = buyers.find(function (x) { return x.id === bid; }); if (b) bnames.push(b.name); });
+                if (bnames.length) html += '<span>- ' + bnames.join(', ') + '</span>';
+              }
         if (p.yield) html += '<span class="badge badge-green" style="font-size:9px">YC:' + p.yield + '%</span>';
         if (p.yield2) html += '<span class="badge badge-blue" style="font-size:9px">YR:' + p.yield2 + '%</span>';
         if (!hasYield) html += '<span style="color:#e65100;font-size:9px">No yield</span>';
@@ -3439,16 +3638,16 @@
       document.getElementById('prod-list').innerHTML = html;
     }
     function saveProd() {
-      var id = document.getElementById('pm-id').value; var cat = document.getElementById('pm-cat-sel').value;
-      var obj = { id: id || 'pr' + Date.now(), code: document.getElementById('pm-code').value.trim(), name: document.getElementById('pm-name').value.trim(), cat: cat, packing: document.getElementById('pm-packing').value.trim(), ft40: parseFloat(document.getElementById('pm-40').value) || 0, ft20: parseFloat(document.getElementById('pm-20').value) || 0, raw: document.getElementById('pm-raw').value, yield: parseFloat(document.getElementById('pm-yield').value) || 0, yield2: parseFloat(document.getElementById('pm-yield2').value) || 0, buyerId: document.getElementById('pm-buyer').value };
+          var id = document.getElementById('pm-id').value; var cat = document.getElementById('pm-cat-sel').value;
+          var obj = { id: id || 'pr' + Date.now(), code: document.getElementById('pm-code').value.trim(), name: document.getElementById('pm-name').value.trim(), cat: cat, packing: document.getElementById('pm-packing').value.trim(), ft40: parseFloat(document.getElementById('pm-40').value) || 0, ft20: parseFloat(document.getElementById('pm-20').value) || 0, raw: document.getElementById('pm-raw').value, yield: parseFloat(document.getElementById('pm-yield').value) || 0, yield2: parseFloat(document.getElementById('pm-yield2').value) || 0, buyerIds: getSelectedBuyerIds() };
       if (!obj.name) { alert('Please enter product name.'); return; }
       if (id) { var i = products.findIndex(function (p) { return p.id === id; }); if (i > -1) products[i] = obj; } else products.push(obj);
       fbSet('products', obj.id, obj);
       renderProdList(); clearPF(); popCatSel(); popProdCatFilter(); popCreateDDs();
     }
-    function editP(id) { var p = products.find(function (x) { return x.id === id; }); if (!p) return; document.getElementById('pm-id').value = p.id; document.getElementById('pm-code').value = p.code || ''; document.getElementById('pm-name').value = p.name; document.getElementById('pm-cat-sel').value = p.cat || ''; document.getElementById('pm-packing').value = p.packing || ''; document.getElementById('pm-40').value = p.ft40 || ''; document.getElementById('pm-20').value = p.ft20 || ''; document.getElementById('pm-raw').value = p.raw || ''; document.getElementById('pm-yield').value = p.yield || ''; document.getElementById('pm-yield2').value = p.yield2 || ''; document.getElementById('pm-buyer').value = p.buyerId || ''; }
+    function editP(id) { var p = products.find(function (x) { return x.id === id; }); if (!p) return; document.getElementById('pm-id').value = p.id; document.getElementById('pm-code').value = p.code || ''; document.getElementById('pm-name').value = p.name; document.getElementById('pm-cat-sel').value = p.cat || ''; document.getElementById('pm-packing').value = p.packing || ''; document.getElementById('pm-40').value = p.ft40 || ''; document.getElementById('pm-20').value = p.ft20 || ''; document.getElementById('pm-raw').value = p.raw || ''; document.getElementById('pm-yield').value = p.yield || ''; document.getElementById('pm-yield2').value = p.yield2 || ''; popBuyerMultiSelect(); setSelectedBuyerIds(normBuyerIds(p.buyerIds || p.buyerId)); }
     function delP(id) { if (confirm('Delete product?')) { products = products.filter(function (p) { return p.id !== id; }); fbDel('products', id); renderProdList(); } }
-    function clearPF() { ['pm-id', 'pm-code', 'pm-name', 'pm-packing', 'pm-40', 'pm-20', 'pm-yield', 'pm-yield2'].forEach(function (i) { document.getElementById(i).value = ''; }); document.getElementById('pm-raw').value = ''; document.getElementById('pm-buyer').value = ''; document.getElementById('pm-cat-sel').value = ''; }
+    function clearPF() { ['pm-id', 'pm-code', 'pm-name', 'pm-packing', 'pm-40', 'pm-20', 'pm-yield', 'pm-yield2'].forEach(function (i) { document.getElementById(i).value = ''; }); document.getElementById('pm-raw').value = ''; document.getElementById('pm-cat-sel').value = ''; setSelectedBuyerIds([]); }
     function renderPortList() {
       if (!ports.length) { document.getElementById('port-list').innerHTML = '<div style="text-align:center;padding:16px;color:#aaa">No ports.</div>'; return; }
       var html = '';
@@ -3488,7 +3687,20 @@
       var sf = document.getElementById('so-fil-status').value || '';
       var qf = (document.getElementById('so-fil-q').value || '').toLowerCase();
       var showHistory = document.getElementById('so-show-history').checked;
-      var list = saleOrders.filter(function (so) { if (!showHistory && so.status === 'superseded') return false; if (sf && so.status !== sf) return false; if (qf && (so.soNo + so.buyerName).toLowerCase().indexOf(qf) < 0) return false; return true; });
+      var list = saleOrders.filter(function (so) {
+        if (!showHistory && so.status === 'superseded') return false;
+        if (sf) {
+          if (sf === 'rejected') {
+            if (so.status !== 'draft' || !so.rejectReason) return false;
+          } else if (sf === 'draft') {
+            if (so.status !== 'draft' || so.rejectReason) return false;
+          } else {
+            if (so.status !== sf) return false;
+          }
+        }
+        if (qf && (so.soNo + so.buyerName).toLowerCase().indexOf(qf) < 0) return false;
+        return true;
+      });
       // Sort by date descending (latest first)
       list.sort(function (a, b) {
         var dateA = a.sentAt || a.date || '';
@@ -3505,6 +3717,7 @@
         if (so.status === 'sent_to_production') stBadge = '<span class="badge badge-amber">Sent to Production</span>';
         else if (so.status === 'acknowledged') stBadge = '<span class="badge badge-green">Acknowledged</span>';
         else if (so.status === 'superseded') stBadge = '<span class="badge badge-gray">Superseded</span>';
+        else if (so.status === 'draft' && so.rejectReason) stBadge = '<span class="badge badge-red">Rejected</span>';
         else stBadge = '<span class="badge badge-gray">Draft</span>';
         // Reject history badge
         var rejectHistBadge = '';
@@ -3553,7 +3766,18 @@
       document.getElementById('so-overlay').style.display = 'block';
       var chk = document.getElementById('chk-so-show-footer'); if (chk) chk.checked = showFooterOption;
     }
-    function confirmSendSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; so.status = 'sent_to_production'; so.sentAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); document.getElementById('so-overlay').style.display = 'none'; renderSOList(); updateProductionBadge(); alert('S/O ' + so.soNo + ' sent to Production!'); }
+    function confirmSendSO(id) {
+      var so = saleOrders.find(function (x) { return String(x.id) === String(id); });
+      if (!so) return;
+      so.status = 'sent_to_production';
+      so.sentAt = new Date().toISOString();
+      so.rejectReason = '';
+      fbSet('saleOrders', so.id, so);
+      document.getElementById('so-overlay').style.display = 'none';
+      renderSOList();
+      updateProductionBadge();
+      alert('S/O ' + so.soNo + ' sent to Production!');
+    }
     function acknowledgeSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; if (!confirm('Approve / Acknowledge S/O ' + so.soNo + '?')) return; so.status = 'acknowledged'; so.acknowledgedAt = new Date().toISOString(); fbSet('saleOrders', so.id, so); renderSOList(); updateProductionBadge(); }
     function viewSO(id) { var so = saleOrders.find(function (x) { return x.id === id; }); if (!so) return; document.getElementById('so-prev-area').innerHTML = buildSODoc(so); document.getElementById('so-overlay').style.display = 'block'; var chk = document.getElementById('chk-so-show-footer'); if (chk) chk.checked = showFooterOption; }
     function buildSODoc(so) {
@@ -3574,9 +3798,15 @@
       if (shipToName) {
         custText += '<br><b>SHIP TO:</b> ' + shipToName;
       }
+      var soNoBlock = '<div style="text-align:right"><b>S/O NO.:</b> ' + so.soNo;
+      if (so.version && so.version > 1) {
+        soNoBlock += '<br><span style="color:#d32f2f;font-weight:bold;font-size:9.5px;text-transform:uppercase;">REVISED ' + so.version + '</span>';
+      }
+      soNoBlock += '</div>';
+
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:10.5px">';
       html += '<div>' + custText + '</div>';
-      html += '<div><b>S/O NO.:</b> ' + so.soNo + '</div></div>';
+      html += soNoBlock + '</div>';
       html += '<table class="doc-table" style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px">';
       html += '<thead><tr style="background:#d0d8e4">';
       html += '<th style="background:#d0d8e4;border:1px solid #000;padding:4px;width:30px;text-align:center">ITEM</th>';
@@ -3684,7 +3914,16 @@
       renderSTSummary(); renderSTList(); renderFreightTrend();
     }
     function nextInvNo() { var yr = new Date().getFullYear().toString().slice(-2); var same = shipEntries.filter(function (e) { return e.invNo && e.invNo.endsWith('/' + yr); }); if (!same.length) return '001/' + yr; return String(Math.max.apply(null, same.map(function (e) { return parseInt(e.invNo.split('/')[0]) || 0; })) + 1).padStart(3, '0') + '/' + yr; }
-    function onSTScChange() { var sel = document.getElementById('st-sc'); var opt = sel.options[sel.selectedIndex]; if (opt && opt.dataset.buyer) { document.getElementById('st-customer').value = opt.dataset.buyer || ''; document.getElementById('st-port').value = opt.dataset.port || ''; } }
+    function onSTScChange() {
+      var sel = document.getElementById('st-sc');
+      if (sel && sel.selectedIndex >= 0) {
+        var opt = sel.options[sel.selectedIndex];
+        if (opt && opt.dataset.buyer) {
+          document.getElementById('st-customer').value = opt.dataset.buyer || '';
+          document.getElementById('st-port').value = opt.dataset.port || '';
+        }
+      }
+    }
     function toggleSTPanel() { var body = document.getElementById('st-panel-body'); var btn = document.querySelector('#st-add-panel .btn-outline'); if (body.style.display === 'none') { body.style.display = ''; btn.textContent = 'Hide'; } else { body.style.display = 'none'; btn.textContent = 'Show'; } }
     function getCustPOsForSC(scNo) {
       var latest = getLatestContracts();
@@ -3702,13 +3941,73 @@
       var cd = document.getElementById('st-closing-date').value, ct = document.getElementById('st-closing-time').value;
       var obj = { id: id || 'sh' + Date.now(), invNo: document.getElementById('st-inv').value.trim(), ref: document.getElementById('st-ref').value.trim(), scNo: document.getElementById('st-sc').value, customer: document.getElementById('st-customer').value.trim(), port: document.getElementById('st-port').value.trim(), finishDate: document.getElementById('st-finish').value, lab: document.getElementById('st-lab').value, cy: document.getElementById('st-cy').value, returnDate: document.getElementById('st-return').value, closing: cd ? (cd + (ct ? ' ' + ct : '')) : '', etd: document.getElementById('st-etd').value, eta: document.getElementById('st-eta').value, agent: document.getElementById('st-agent').value.trim(), vessel: document.getElementById('st-vessel').value.trim(), freight: document.getElementById('st-freight').value, containerNo: document.getElementById('st-container').value.trim(), note: document.getElementById('st-note').value.trim(), createdAt: new Date().toISOString() };
       if (!obj.invNo) { alert('Please enter Invoice No.'); return; }
-      if (id) { var i = shipEntries.findIndex(function (e) { return e.id === id; }); if (i > -1) shipEntries[i] = obj; } else shipEntries.unshift(obj);
+      if (id) { var i = shipEntries.findIndex(function (e) { return String(e.id) === String(id); }); if (i > -1) shipEntries[i] = obj; } else shipEntries.unshift(obj);
       fbSet('shipEntries', obj.id, obj);
       clearSTForm(); initShipTrack();
     }
     function clearSTForm() { ['st-ref', 'st-customer', 'st-port', 'st-finish', 'st-lab', 'st-cy', 'st-return', 'st-closing-date', 'st-etd', 'st-eta', 'st-agent', 'st-vessel', 'st-container', 'st-note'].forEach(function (i) { var el = document.getElementById(i); if (el) el.value = ''; }); document.getElementById('st-closing-time').value = '23:59'; document.getElementById('st-freight').value = ''; document.getElementById('st-sc').value = ''; document.getElementById('st-editing-id').value = ''; document.getElementById('st-panel-title').textContent = 'New Invoice / Container'; document.getElementById('st-inv').value = nextInvNo(); }
-    function editSTEntry(id) { var e = shipEntries.find(function (x) { return x.id === id; }); if (!e) return; document.getElementById('st-editing-id').value = e.id; document.getElementById('st-inv').value = e.invNo || ''; document.getElementById('st-ref').value = e.ref || ''; document.getElementById('st-sc').value = e.scNo || ''; onSTScChange(); document.getElementById('st-customer').value = e.customer || ''; document.getElementById('st-port').value = e.port || ''; document.getElementById('st-finish').value = e.finishDate || ''; document.getElementById('st-lab').value = e.lab || ''; document.getElementById('st-cy').value = e.cy || ''; document.getElementById('st-return').value = e.returnDate || ''; if (e.closing) { var p = e.closing.split(' '); document.getElementById('st-closing-date').value = p[0] || ''; document.getElementById('st-closing-time').value = p[1] || '23:59'; } document.getElementById('st-etd').value = e.etd || ''; document.getElementById('st-eta').value = e.eta || ''; document.getElementById('st-agent').value = e.agent || ''; document.getElementById('st-vessel').value = e.vessel || ''; document.getElementById('st-freight').value = e.freight || ''; document.getElementById('st-container').value = e.containerNo || ''; document.getElementById('st-note').value = e.note || ''; document.getElementById('st-panel-title').textContent = 'Edit: ' + e.invNo; document.getElementById('st-add-panel').scrollIntoView({ behavior: 'smooth' }); document.getElementById('st-panel-body').style.display = ''; }
-    function delSTEntry(id) { if (!confirm('Delete?')) return; shipEntries = shipEntries.filter(function (e) { return e.id !== id; }); fbDel('shipEntries', id); initShipTrack(); }
+    function editSTEntry(id) {
+      try {
+        var e = shipEntries.find(function (x) { return String(x.id) === String(id); });
+        if (!e) {
+          console.warn('Shipment entry not found for ID:', id);
+          return;
+        }
+        document.getElementById('st-editing-id').value = e.id || '';
+        document.getElementById('st-inv').value = e.invNo || '';
+        document.getElementById('st-ref').value = e.ref || '';
+        document.getElementById('st-sc').value = e.scNo || '';
+        
+        try {
+          onSTScChange();
+        } catch (err) {
+          console.warn('Error in onSTScChange:', err);
+        }
+        
+        document.getElementById('st-customer').value = e.customer || '';
+        document.getElementById('st-port').value = e.port || '';
+        document.getElementById('st-finish').value = e.finishDate || '';
+        document.getElementById('st-lab').value = e.lab || '';
+        document.getElementById('st-cy').value = e.cy || '';
+        document.getElementById('st-return').value = e.returnDate || '';
+        
+        if (e.closing) {
+          var closingStr = typeof e.closing === 'string' ? e.closing : String(e.closing);
+          var p = closingStr.split(' ');
+          document.getElementById('st-closing-date').value = p[0] || '';
+          document.getElementById('st-closing-time').value = p[1] || '23:59';
+        } else {
+          document.getElementById('st-closing-date').value = '';
+          document.getElementById('st-closing-time').value = '23:59';
+        }
+        
+        document.getElementById('st-etd').value = e.etd || '';
+        document.getElementById('st-eta').value = e.eta || '';
+        document.getElementById('st-agent').value = e.agent || '';
+        document.getElementById('st-vessel').value = e.vessel || '';
+        document.getElementById('st-freight').value = e.freight || '';
+        document.getElementById('st-container').value = e.containerNo || '';
+        document.getElementById('st-note').value = e.note || '';
+        document.getElementById('st-panel-title').textContent = 'Edit: ' + (e.invNo || '');
+        
+        var panelBody = document.getElementById('st-panel-body');
+        if (panelBody) {
+          panelBody.style.display = '';
+        }
+        var btn = document.querySelector('#st-add-panel .btn-outline');
+        if (btn) {
+          btn.textContent = 'Hide';
+        }
+        var addPanel = document.getElementById('st-add-panel');
+        if (addPanel) {
+          addPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+      } catch (err) {
+        console.error('Error in editSTEntry:', err);
+        alert('Error editing shipment entry: ' + err.message);
+      }
+    }
+    function delSTEntry(id) { if (!confirm('Delete?')) return; shipEntries = shipEntries.filter(function (e) { return String(e.id) !== String(id); }); fbDel('shipEntries', id); initShipTrack(); }
     function showNote(txt, id, evt) {
       if (evt) evt.stopPropagation();
       var popup = document.getElementById('note-popup');
@@ -3955,6 +4254,7 @@
       var showDetail = document.getElementById('rm-show-detail').checked;
       var latestC = getLatestContracts();
       var byMonth = {}, catQty = {}, rawTotals = { 'BB': 0, 'BIL': 0, 'Wing': 0, 'Other': 0 }, skipped = 0;
+      var rawGroupCats = { 'BB': {}, 'BIL': {}, 'Wing': {}, 'Other': {} };
       categories.forEach(function (c) {
         if (c.name) catQty[c.name] = 0;
       });
@@ -3997,23 +4297,29 @@
             else if (raw === 'BIL') rtype = 'BIL';
             else if (raw === 'Wing') rtype = 'Wing';
             rawTotals[rtype] += rawNeed;
+
+            // Group category under raw material type
+            if (cat) {
+              if (!rawGroupCats[rtype][cat]) rawGroupCats[rtype][cat] = 0;
+              rawGroupCats[rtype][cat] += qty;
+            }
           });
         });
       });
 
       // Category cards
-      var catKeys = Object.keys(catQty).sort(function (a, b) { return catQty[b] - catQty[a]; });
-      var catCardsEl = document.getElementById('rm-cat-cards');
-      if (catKeys.length) {
-        var ccHtml = '<div style="grid-column:1/-1;font-weight:700;font-size:11px;color:#1a3a5c;text-align:left;margin-bottom:2px">Order Quantity by Category</div>';
-        catKeys.forEach(function (cat) {
-          ccHtml += '<div class="stat-card"><div class="sn" style="font-size:16px">' + catQty[cat].toFixed(2) + '</div><div class="sl">' + cat + ' (MT product)</div></div>';
-        });
-        catCardsEl.innerHTML = ccHtml;
-        catCardsEl.style.display = 'grid';
-      } else {
-        catCardsEl.innerHTML = ''; catCardsEl.style.display = 'none';
-      }
+            var catKeys = Object.keys(catQty).sort(function (a, b) { return catQty[b] - catQty[a]; });
+            var catCardsEl = document.getElementById('rm-cat-cards');
+            if (catKeys.length) {
+              var ccHtml = '<div style="grid-column:1/-1;font-weight:700;font-size:11px;color:#1a3a5c;text-align:left;margin-bottom:2px">Order Quantity by Category</div>';
+              catKeys.forEach(function (cat) {
+                ccHtml += '<div class="stat-card"><div class="sn" style="font-size:16px">' + catQty[cat].toFixed(2) + '</div><div class="sl">' + cat + ' (MT product)</div></div>';
+              });
+              catCardsEl.innerHTML = ccHtml;
+              catCardsEl.style.display = 'grid';
+            } else {
+              catCardsEl.innerHTML = ''; catCardsEl.style.display = 'none';
+            }
 
       // Raw Material Usage Summary cards
       var usageCardsEl = document.getElementById('rm-usage-cards');
@@ -4022,7 +4328,31 @@
         ['BB', 'BIL', 'Wing', 'Other'].forEach(function (rtype) {
           var amt = rawTotals[rtype] || 0;
           var color = rtype === 'BIL' ? '#0d47a1' : rtype === 'BB' ? '#6a1b9a' : rtype === 'Wing' ? '#e65100' : '#555';
-          ucHtml += '<div class="stat-card"><div class="sn" style="font-size:16px;color:' + color + '">' + amt.toFixed(2) + '</div><div class="sl">' + rtype + ' Needed (MT)</div></div>';
+          
+          // Generate categories section
+          var catHtml = '';
+          var rCats = rawGroupCats[rtype] || {};
+          var sortedCats = Object.keys(rCats).sort(function (a, b) { return rCats[b] - rCats[a]; });
+          
+          if (sortedCats.length > 0) {
+            catHtml += '<div style="margin-top:8px; border-top:1px solid #eee; padding-top:6px; font-size:10px; text-align:left;">';
+            sortedCats.forEach(function (catName) {
+              var cqty = rCats[catName] || 0;
+              catHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:3px; color:#555;">' +
+                           '<span style="font-weight:600; color:#333; max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + catName + '">' + catName + '</span>' +
+                           '<span style="font-weight:700; color:#1a3a5c;">' + cqty.toFixed(2) + ' MT</span>' +
+                         '</div>';
+            });
+            catHtml += '</div>';
+          }
+          
+          ucHtml += '<div class="stat-card" style="display:flex; flex-direction:column; justify-content:space-between; min-height:80px; text-align:left; padding:10px 12px;">' +
+                      '<div>' +
+                        '<div class="sn" style="font-size:16px; color:' + color + '; font-weight:700; text-align:center;">' + amt.toFixed(2) + '</div>' +
+                        '<div class="sl" style="font-size:10px; color:#666; font-weight:700; text-align:center; text-transform:uppercase;">' + rtype + ' Needed (MT)</div>' +
+                      '</div>' +
+                      catHtml +
+                    '</div>';
         });
         usageCardsEl.innerHTML = ucHtml;
         usageCardsEl.style.display = 'grid';
@@ -4509,10 +4839,15 @@
           var totalQty = so.rows.reduce(function (s, r) { return s + (parseFloat(r.qty) || 0); }, 0);
           var isSup = so.status === 'superseded';
 
+          var rejectHistBadge = '';
+          if (so.rejectHistory && so.rejectHistory.length > 0) {
+            rejectHistBadge = '<div style="margin-top:3px"><span class="badge badge-red" style="font-size:8px;cursor:pointer" title="' + so.rejectHistory.length + ' rejection(s)" onclick="showRejectHistory(\'' + so.id + '\')">' + so.rejectHistory.length + 'x Rejected</span></div>';
+          }
+
           if (so.status === 'sent_to_production') {
             pendingCount++;
             pendingHtml += '<tr>';
-            pendingHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span></td>';
+            pendingHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span>' + rejectHistBadge + '</td>';
             pendingHtml += '<td>' + fd(so.date) + '</td>';
             pendingHtml += '<td style="font-size:10px">' + so.buyerName + '</td>';
             pendingHtml += '<td style="font-size:10px">' + (so.shipmentDoc || '-') + '</td>';
@@ -4525,18 +4860,31 @@
             pendingHtml += '<button class="btn btn-success btn-xs" onclick="productionAcknowledge(\'' + so.id + '\')">Acknowledge</button>';
             pendingHtml += '<button class="btn btn-danger btn-xs" onclick="productionReject(\'' + so.id + '\')">Reject</button>';
             pendingHtml += '</div></td></tr>';
-          } else if (so.status === 'acknowledged') {
+          } else if (so.status === 'acknowledged' || (so.status === 'draft' && so.rejectReason)) {
             historyCount++;
+            var statusBadge = '';
+            var processedDate = '-';
+            if (so.status === 'acknowledged') {
+              statusBadge = '<span class="badge badge-green">Acknowledged</span>';
+              processedDate = so.acknowledgedAt ? fd(so.acknowledgedAt) : '-';
+            } else {
+              statusBadge = '<span class="badge badge-red">Rejected</span>';
+              if (so.rejectHistory && so.rejectHistory.length > 0) {
+                var lastReject = so.rejectHistory[so.rejectHistory.length - 1];
+                processedDate = lastReject.rejectedAt ? fd(lastReject.rejectedAt) : '-';
+              }
+            }
+
             historyHtml += '<tr ' + (isSup ? 'style="opacity:0.5;background:#fafafa"' : '') + '>';
-            historyHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span></td>';
+            historyHtml += '<td><span class="badge badge-blue">' + so.soNo + '</span>' + rejectHistBadge + '</td>';
             historyHtml += '<td>' + fd(so.date) + '</td>';
             historyHtml += '<td style="font-size:10px">' + so.buyerName + '</td>';
             historyHtml += '<td style="font-size:10px">' + (so.shipmentDoc || '-') + '</td>';
             historyHtml += '<td style="font-size:10px">' + (so.port || '-') + '</td>';
             historyHtml += '<td style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + prods + '</td>';
             historyHtml += '<td style="text-align:right">' + (totalQty ? totalQty.toFixed(3) : '-') + '</td>';
-            historyHtml += '<td><span class="badge badge-green">Acknowledged</span></td>';
-            historyHtml += '<td style="font-size:10px">' + (so.acknowledgedAt ? fd(so.acknowledgedAt) : '-') + '</td>';
+            historyHtml += '<td>' + statusBadge + '</td>';
+            historyHtml += '<td style="font-size:10px">' + processedDate + '</td>';
             historyHtml += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
             historyHtml += '<button class="btn btn-outline btn-xs" onclick="viewSO(\'' + so.id + '\')">View</button>';
             historyHtml += '</div></td></tr>';
@@ -4552,7 +4900,7 @@
     }
 
     async function productionAcknowledge(id) {
-      var so = saleOrders.find(function (x) { return x.id === id; });
+      var so = saleOrders.find(function (x) { return String(x.id) === String(id); });
       if (!so) return;
       if (await showAppConfirm('Acknowledge S/O?', 'Do you want to acknowledge S/O ' + so.soNo + '?', 'Acknowledge')) {
         so.status = 'acknowledged';
@@ -4566,7 +4914,7 @@
     }
 
     async function productionReject(id) {
-      var so = saleOrders.find(function (x) { return x.id === id; });
+      var so = saleOrders.find(function (x) { return String(x.id) === String(id); });
       if (!so) return;
       var reason = await showAppPrompt('Reject S/O?', 'Enter rejection reason for S/O ' + so.soNo + '.', {
         placeholder: 'Reason / comments',
@@ -4589,15 +4937,39 @@
       so.rejectReason = reason;
       so.remarks = '[Rejected by Production: ' + reason + '] ' + (so.remarks || '');
       fbSet('saleOrders', so.id, so);
+
+      // ALSO REJECT THE PARENT SALES CONTRACT AND ALL ASSOCIATED SALE ORDERS
+      var contract = contracts.find(function (c) { return c.id === so.contractId; });
+      if (contract) {
+        contract.approvalStatus = 'rejected';
+        contract.rejectReason = '[Production Rejected] ' + reason;
+        contract.rejectedAt = new Date().toISOString();
+        fbSet('contracts', contract.id, contract);
+
+        // Reset all active (non-superseded) S/Os under this contract to draft
+        saleOrders.forEach(function (otherSO) {
+          if (otherSO.contractId === contract.id && otherSO.status !== 'superseded') {
+            otherSO.status = 'draft';
+            otherSO.rejectReason = '[Contract Rejected by Production]';
+            if (!otherSO.rejectHistory) otherSO.rejectHistory = [];
+            otherSO.rejectHistory.push({
+              reason: 'Parent contract rejected because S/O ' + so.soNo + ' was rejected by Production: ' + reason,
+              rejectedAt: new Date().toISOString(),
+              rejectedBy: 'Production'
+            });
+            fbSet('saleOrders', otherSO.id, otherSO);
+          }
+        });
+      }
       
       renderProductionPage();
       updateProductionBadge();
-      await showAppAlert('Rejected', 'S/O rejected and returned to draft.', 'success');
+      await showAppAlert('Rejected', 'S/O and Sales Contract have been rejected and returned to draft.', 'success');
     }
 
     // Show reject history popup for a Sale Order
     function showRejectHistory(soId) {
-      var so = saleOrders.find(function (x) { return x.id === soId; });
+      var so = saleOrders.find(function (x) { return String(x.id) === String(soId); });
       if (!so || !so.rejectHistory || !so.rejectHistory.length) {
         alert('No rejection history found.');
         return;
@@ -4614,6 +4986,8 @@
 </body>
 
 </html>
+
+
 
 
 
