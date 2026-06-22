@@ -2625,7 +2625,7 @@
         }
       }
 
-      return { date: document.getElementById('f-date').value, formNo: 'FM-MK-03/04 Rev.01', buyerId: bid, buyerName: b.name || '', buyerContact: b.contact || '', buyerBillAddr: b.billAddr || '', buyerAddr: b.addr || '', buyerTel: b.tel || '', buyerFax: b.fax || '', shipToId: stBid, shipToName: stB ? stB.name || '' : '', shipToAddr: shipToAddr, incoterm: document.getElementById('f-incoterm').value, payment: document.getElementById('f-payment').value, remarks: document.getElementById('f-remarks').value, payType: document.getElementById('f-pay-type').value, hasCom: document.getElementById('f-has-com').checked, comType: document.getElementById('f-com-type').value, comVal: parseFloat(document.getElementById('f-com-val').value) || 0, groups: groups };
+      return { date: document.getElementById('f-date').value, formNo: 'FM-MK-03/04 Rev.01', buyerId: bid, buyerName: b.name || '', buyerContact: b.contact || '', buyerBillAddr: b.billAddr || '', buyerAddr: b.addr || '', buyerTel: b.tel || '', buyerFax: b.fax || '', shipToId: stBid, shipToName: stB ? stB.name || '' : '', shipToAddr: shipToAddr, incoterm: document.getElementById('f-incoterm').value, payment: document.getElementById('f-payment').value, remarks: document.getElementById('f-remarks').value, payType: document.getElementById('f-pay-type').value, hasCom: document.getElementById('f-has-com').checked, comType: document.getElementById('f-com-type').value, comVal: parseFloat(document.getElementById('f-com-val').value) || 0, groups: groups, version: editId ? (parseInt(document.getElementById('editing-version').value || '0') + 1) : 1 };
       }
       function saveContract() {
       var data = getFD();
@@ -2728,7 +2728,10 @@
         fbSet('saleOrders', so.id, so);
       }
 
-      renderDash();
+      if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
+      if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
+      if (document.getElementById('sc-search-panel') && document.getElementById('sc-search-panel').style.display !== 'none') searchSCList();
+      renderSOList();
       await showAppAlert('SC Cancelled', 'SC ' + scNo + ' has been marked as Cancelled.', 'success');
     }
 
@@ -2749,7 +2752,10 @@
       
       var showCancelled = document.getElementById('fil-show-cancelled');
       if (showCancelled) showCancelled.checked = true;
-      renderDash();
+      if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
+      if (document.getElementById('page-approval').classList.contains('active')) renderApprovalPage();
+      if (document.getElementById('sc-search-panel') && document.getElementById('sc-search-panel').style.display !== 'none') searchSCList();
+      renderSOList();
       await showAppAlert('Contract Cancelled', 'Contract has been marked as Cancelled and remains available under Show Cancelled.', 'success');
     }
     function reviseContract(id) {
@@ -2917,7 +2923,7 @@
       html += '<img class="doc-header-img"' + headerStyle + ' src="' + HDR_IMG + '" alt="TPG Header">';
       html += '<div class="doc-content" style="position:relative;">';
       if (data.version && data.version > 1) {
-        html += '<div style="position:absolute;right:30px;top:55px;color:#000;font-size:12px;font-weight:bold;text-transform:uppercase;z-index:10;font-family:Arial,sans-serif;">revised.' + data.version + '</div>';
+        html += '<div style="position:absolute;right:30px;top:55px;color:#000;font-size:12px;font-weight:bold;text-transform:uppercase;z-index:10;font-family:Arial,sans-serif;">revised ' + data.version + '</div>';
       }
       html += '<div class="doc-meta"><span>' + data.formNo + '</span><span>' + fd(data.date) + '</span></div>';
       html += '<div class="doc-title-row">';
@@ -3195,32 +3201,8 @@
         else if (c.approvalStatus === 'approved') appBadge = '<br><span class="badge badge-green" style="font-size:8px;margin-top:2px;display:inline-block">Approved</span>';
         else if (c.approvalStatus === 'rejected') appBadge = '<br><span class="badge badge-red" style="font-size:8px;margin-top:2px;display:inline-block">Rejected</span>';
 
-        var pdfBtnName = (c.approvalStatus === 'approved') ? 'Signed PDF' : 'Draft PDF';
-        var pdfBtnClass = (c.approvalStatus === 'approved') ? 'btn-success' : 'btn-outline';
-        var editBtn = '';
-        var cancelSCBtn = '';
-        if (hasPerm('saleContract') && c.status === 'active') {
-          editBtn = '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + c.id + '\')">Edit</button>';
-          if (!g.isCancelled) {
-            cancelSCBtn = '<button class="btn btn-danger btn-xs" onclick="cancelContractGroup(\'' + c.id + '\', \'' + g.scNo + '\')">Cancel SC</button>';
-          }
-        }
-        var rejectBtn = '';
-        var role = getCurrentApprovalRole();
-        if (c.status !== 'cancelled') {
-          if (c.approvalStatus === 'pending_supervisor' || c.approvalStatus === 'pending_manager') {
-            if (role === 'sales' || role === 'supervisor' || role === 'manager' || role === 'admin') {
-              rejectBtn = '<button class="btn btn-danger btn-xs" onclick="rejectContract(\'' + c.id + '\')">Reject</button>';
-            }
-          }
-        }
-
         var actCell = '<div style="display:flex;gap:3px;flex-direction:column">' +
           '<button class="btn btn-outline btn-xs" onclick="viewC(\'' + c.id + '\')">View</button>' +
-          editBtn +
-          cancelSCBtn +
-          '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + c.id + '\')">' + pdfBtnName + '</button>' +
-          rejectBtn +
           '</div>';
         g.rows.forEach(function (r, i) {
           var isFirst = (i === 0);
@@ -3745,11 +3727,27 @@
         } else {
           html += '<td><input type="text" value="' + (so.remarks || '') + '" onchange="saveSORemarks(\'' + so.id + '\',this.value)" style="border:1px solid #d0d0d0;border-radius:3px;padding:3px 6px;font-size:11px;width:130px"></td>';
         }
+        var editBtn = '';
+        var cancelSCBtn = '';
+        var pdfBtn = '';
+        if (contract) {
+          if (hasPerm('saleContract') && contract.status === 'active' && so.status !== 'cancelled' && so.status !== 'superseded') {
+            editBtn = '<button class="btn btn-primary btn-xs" onclick="reviseContract(\'' + contract.id + '\')">Edit</button>';
+            cancelSCBtn = '<button class="btn btn-danger btn-xs" onclick="cancelContractGroup(\'' + contract.id + '\', \'' + so.soNo + '\')">Cancel SC</button>';
+          }
+          var pdfBtnName = (contract.approvalStatus === 'approved') ? 'Signed PDF' : 'Draft PDF';
+          var pdfBtnClass = (contract.approvalStatus === 'approved') ? 'btn-success' : 'btn-outline';
+          pdfBtn = '<button class="btn ' + pdfBtnClass + ' btn-xs" onclick="downloadPDF(\'' + contract.id + '\')">' + pdfBtnName + '</button>';
+        }
+
         html += '<td>' + stBadge + rejectHistBadge + '</td>';
         html += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
         html += '<button class="btn btn-outline btn-xs" onclick="viewSO(\'' + so.id + '\')">View</button>';
         if (!isSup && so.status === 'draft') html += '<button class="btn btn-primary btn-xs" onclick="sendSOById(\'' + so.id + '\')">Send</button>';
         if (!isSup && so.status === 'sent_to_production') html += '<button class="btn btn-success btn-xs" onclick="acknowledgeSO(\'' + so.id + '\')">Approve / Acknowledge</button>';
+        html += editBtn;
+        html += cancelSCBtn;
+        html += pdfBtn;
         html += '</div></td></tr>';
       });
       document.getElementById('so-tbody').innerHTML = html;
