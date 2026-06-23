@@ -1337,6 +1337,24 @@
                 <option value="draft">Draft</option>
                 <option value="rejected">Rejected</option>
               </select>
+              <select id="so-fil-year" onchange="renderSOList()">
+                <option value="">All Years</option>
+              </select>
+              <select id="so-fil-month" onchange="renderSOList()">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
               <input id="so-fil-q" placeholder="Search SO / Buyer..." oninput="renderSOList()" style="width:180px">
               <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer"><input
                   type="checkbox" id="so-show-history" onchange="renderSOList()"> Show history</label>
@@ -3665,8 +3683,34 @@
     function editIncoterm(id) { var x = incoterms.find(function (v) { return v.id === id; }); if (!x) return; document.getElementById('inco-id').value = x.id; document.getElementById('inco-code').value = x.code || ''; document.getElementById('inco-desc').value = x.desc || ''; }
     function delIncoterm(id) { if (confirm('Delete incoterm?')) { incoterms = incoterms.filter(function (x) { return x.id !== id; }); fbDel('incoterms', id); renderIncotermList(); popIncotermSel(); } }
     function clearIncotermF() { document.getElementById('inco-id').value = ''; document.getElementById('inco-code').value = ''; document.getElementById('inco-desc').value = ''; }
+    function popSOFilters() {
+      var years = {};
+      saleOrders.forEach(function (so) {
+        if (so.date) {
+          var y = so.date.substring(0, 4);
+          if (y && /^\d{4}$/.test(y)) {
+            years[y] = 1;
+          }
+        }
+      });
+      var yfEl = document.getElementById('so-fil-year');
+      if (yfEl) {
+        var yv = yfEl.value;
+        yfEl.innerHTML = '<option value="">All Years</option>';
+        Object.keys(years).sort().forEach(function (y) {
+          var o = document.createElement('option');
+          o.value = y;
+          o.textContent = y;
+          yfEl.appendChild(o);
+        });
+        yfEl.value = yv;
+      }
+    }
     function renderSOList() {
+      popSOFilters();
       var sf = document.getElementById('so-fil-status').value || '';
+      var yf = document.getElementById('so-fil-year').value || '';
+      var mf = document.getElementById('so-fil-month').value || '';
       var qf = (document.getElementById('so-fil-q').value || '').toLowerCase();
       var showHistory = document.getElementById('so-show-history').checked;
       var list = saleOrders.filter(function (so) {
@@ -3679,6 +3723,14 @@
           } else {
             if (so.status !== sf) return false;
           }
+        }
+        if (yf && so.date) {
+          var y = so.date.substring(0, 4);
+          if (y !== yf) return false;
+        }
+        if (mf && so.date) {
+          var m = so.date.substring(5, 7);
+          if (m !== mf) return false;
         }
         if (qf && (so.soNo + so.buyerName).toLowerCase().indexOf(qf) < 0) return false;
         return true;
