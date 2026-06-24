@@ -1201,6 +1201,9 @@
         <div
           style="color: rgba(255,255,255,0.5); font-size: 10px; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
           id="sb-user-email">guest@tpg.com</div>
+        <button class="btn btn-primary btn-xs"
+          style="width: 100%; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.15); background: #3b71ca;"
+          onclick="showPage('signature-settings', this)">Signature Settings</button>
         <button class="btn btn-danger btn-xs"
           style="width: 100%; border: 1px solid rgba(255,255,255,0.15); background: #c62828;"
           onclick="doLogout()">Logout</button>
@@ -2008,6 +2011,30 @@
           </div>
         </div>
       </div>
+      <div id="page-signature-settings" class="page">
+        <div style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:10px">Signature Settings</div>
+        <div class="card" style="max-width: 500px;">
+          <div class="card-title">My Signature</div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-weight: bold; font-size: 11px; display: block; margin-bottom: 4px;">Current Signature Preview</label>
+            <div id="sig-current-preview-container" style="border: 1px dashed #ccc; border-radius: 4px; padding: 10px; background: #fafafa; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center;">
+              <span id="sig-no-signature" style="color: #aaa; font-style: italic;">No signature set</span>
+              <img id="sig-current-img" style="max-height: 100px; max-width: 100%; display: none;" alt="Signature">
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom: 15px;">
+            <div class="fg">
+              <label>Upload Signature Image</label>
+              <input type="file" id="sig-file-input" accept="image/*" style="border: 1px solid #d0d0d0; padding: 4px;" onchange="handleSignatureUpload(event)">
+              <small style="color: #666; margin-top: 4px;">Choose a clean signature image file. It will be stored as your signature stamp.</small>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="saveSignature()">Save Signature</button>
+            <button class="btn btn-danger" onclick="clearSignature()">Remove Signature</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="overlay" id="prev-overlay">
@@ -2142,7 +2169,8 @@
               email: user.email,
               name: inferredProfile.name,
               role: inferredProfile.role,
-              permissions: Object.assign({}, inferredProfile.permissions)
+              permissions: Object.assign({}, inferredProfile.permissions),
+              signature: null
             };
             try {
               var doc = await db.collection('users').doc(user.uid).get();
@@ -2151,6 +2179,7 @@
                 currentUser.name = data.name || currentUser.name;
                 currentUser.role = data.role || currentUser.role;
                 currentUser.permissions = data.permissions || currentUser.permissions || defaultPermissionsForRole(currentUser.role);
+                currentUser.signature = data.signature || null;
               }
             } catch (err) {
               console.warn('Error fetching user profile:', err);
@@ -2431,6 +2460,7 @@
       if (p === 'create') { popCreateDDs(); popIncotermSel(); setToday(); switchCreateTab(hasPerm('saleContract') ? 'contract' : 'so'); }
       if (p === 'approval') renderApprovalPage();
       if (p === 'production') renderProductionPage();
+      if (p === 'signature-settings') loadSignatureSettingsPage();
       if (isMobileLayout()) closeMobileSidebar();
     }
     var gc = 0;
@@ -2970,8 +3000,14 @@
       }
       var managerSig = '';
       if (data.approvalStatus === 'approved') {
-        managerSig = '<div style="position:absolute;margin-top:-22px;margin-left:45px;border:2px dashed #0d47a1;color:#0d47a1;font-size:8px;padding:2px 5px;transform:rotate(-8deg);font-weight:bold;background:rgba(255,255,255,0.95);border-radius:4px;text-align:center;pointer-events:none;z-index:100;line-height:1.2;font-family:Arial,sans-serif;">' +
-          'TPG MANAGER<br><span style="font-size:10px">APPROVED</span><br>' + (data.managerApproveDate || '') + '</div>';
+        if (data.managerSignature) {
+          managerSig = '<div style="position:absolute;left:50%;top:32px;transform:translate(-50%,-50%);z-index:100;pointer-events:none;">' +
+            '<img src="' + data.managerSignature + '" style="max-height:50px;max-width:150px;mix-blend-mode:multiply;" alt="Signature">' +
+            '</div>';
+        } else {
+          managerSig = '<div style="position:absolute;margin-top:-22px;margin-left:45px;border:2px dashed #0d47a1;color:#0d47a1;font-size:8px;padding:2px 5px;transform:rotate(-8deg);font-weight:bold;background:rgba(255,255,255,0.95);border-radius:4px;text-align:center;pointer-events:none;z-index:100;line-height:1.2;font-family:Arial,sans-serif;">' +
+            'TPG MANAGER<br><span style="font-size:10px">APPROVED</span><br>' + (data.managerApproveDate || '') + '</div>';
+        }
       }
 
       if (opts.showSignature !== false) {
@@ -4653,6 +4689,9 @@
         if (await showAppConfirm('Approve as Manager?', 'Sales Contract ' + scNos + ' will be fully approved and your digital signature will be applied to the PDF.', 'Approve')) {
           c.approvalStatus = 'approved';
           c.managerApproveDate = new Date().toISOString().split('T')[0];
+          if (currentUser && currentUser.signature) {
+            c.managerSignature = currentUser.signature;
+          }
           fbSet('contracts', c.id, c);
           
           if (document.getElementById('page-dashboard').classList.contains('active')) renderDash(true);
@@ -5031,6 +5070,112 @@
         msg += '   Reason: ' + h.reason + '\n\n';
       });
       alert(msg);
+    }
+    // --- Signature Setup Functions ---
+    var tempSignatureBase64 = null;
+    function loadSignatureSettingsPage() {
+      var img = document.getElementById('sig-current-img');
+      var noSig = document.getElementById('sig-no-signature');
+      var fileInput = document.getElementById('sig-file-input');
+      
+      if (fileInput) fileInput.value = '';
+      tempSignatureBase64 = null;
+      
+      if (currentUser && currentUser.signature) {
+        if (img) {
+          img.src = currentUser.signature;
+          img.style.display = 'block';
+        }
+        if (noSig) noSig.style.display = 'none';
+      } else {
+        if (img) {
+          img.src = '';
+          img.style.display = 'none';
+        }
+        if (noSig) noSig.style.display = 'block';
+      }
+    }
+
+    function handleSignatureUpload(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      
+      // Limit to 300KB
+      if (file.size > 300 * 1024) {
+        alert('File is too large. Please upload an image smaller than 300KB.');
+        e.target.value = '';
+        return;
+      }
+
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        tempSignatureBase64 = evt.target.result;
+        var img = document.getElementById('sig-current-img');
+        var noSig = document.getElementById('sig-no-signature');
+        if (img) {
+          img.src = tempSignatureBase64;
+          img.style.display = 'block';
+        }
+        if (noSig) noSig.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function saveSignature() {
+      if (!currentUser) {
+        alert('You must be logged in.');
+        return;
+      }
+      if (!tempSignatureBase64) {
+        alert('Please choose a signature image first.');
+        return;
+      }
+      
+      currentUser.signature = tempSignatureBase64;
+      
+      if (useFirebase && db) {
+        document.getElementById('loading-overlay').classList.add('show');
+        document.getElementById('loading-text').textContent = 'Saving signature...';
+        try {
+          await db.collection('users').doc(currentUser.uid).set({
+            signature: currentUser.signature
+          }, { merge: true });
+          alert('Signature saved successfully!');
+        } catch (e) {
+          console.error(e);
+          alert('Failed to save signature to database: ' + e.message);
+        }
+        document.getElementById('loading-overlay').classList.remove('show');
+      } else {
+        alert('Signature saved locally.');
+      }
+      loadSignatureSettingsPage();
+    }
+
+    async function clearSignature() {
+      if (!currentUser) return;
+      if (!confirm('Are you sure you want to remove your signature?')) return;
+      
+      currentUser.signature = null;
+      tempSignatureBase64 = null;
+      
+      if (useFirebase && db) {
+        document.getElementById('loading-overlay').classList.add('show');
+        document.getElementById('loading-text').textContent = 'Removing signature...';
+        try {
+          await db.collection('users').doc(currentUser.uid).set({
+            signature: null
+          }, { merge: true });
+          alert('Signature removed successfully!');
+        } catch (e) {
+          console.error(e);
+          alert('Failed to remove signature from database: ' + e.message);
+        }
+        document.getElementById('loading-overlay').classList.remove('show');
+      } else {
+        alert('Signature removed locally.');
+      }
+      loadSignatureSettingsPage();
     }
   </script>
 </body>
