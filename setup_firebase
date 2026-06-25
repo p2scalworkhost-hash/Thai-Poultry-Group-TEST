@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TPG Firebase Setup & User Creator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0f2027;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #f5f6f8;
+    min-height: 100vh;
+    padding: 30px 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  }
+  h1 {
+    font-size: 24px;
+    color: #4db8ff;
+    margin-bottom: 10px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sub-title {
+    text-align: center;
+    color: #b0c4de;
+    font-size: 14px;
+    margin-bottom: 25px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4db8ff;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .fg {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+  }
+  .fg label {
+    font-size: 11px;
+    color: #b0c4de;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .fg input, .fg select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .fg select option { background: #203a43; color: #fff; }
+  .fg input:focus, .fg select:focus {
+    border-color: #4db8ff;
+    box-shadow: 0 0 5px rgba(77, 184, 255, 0.3);
+  }
+  .perm-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .perm-header {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px;
+    background: rgba(26, 58, 92, 0.4);
+    padding: 7px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #4db8ff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .perm-header span:nth-child(2),
+  .perm-header span:nth-child(3) { text-align: center; }
+  .perm-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px;
+    align-items: center;
+    padding: 6px 9px;
+    font-size: 12px;
+    color: #e8f2ff;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .perm-row:hover { background: rgba(255,255,255,0.06); }
+  .perm-row span:nth-child(2),
+  .perm-row span:nth-child(3) { text-align: center; }
+  .perm-row input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #4db8ff;
+    cursor: pointer;
+  }
+  .perm-row .no-checkbox {
+    color: #555;
+    font-size: 16px;
+  }
+  .btn {
+    background: #1a3a5c;
+    color: #fff;
+    border: 1px solid #4db8ff;
+    padding: 10px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    width: 100%;
+    text-align: center;
+    margin-top: 5px;
+  }
+  .btn:hover { background: #4db8ff; color: #1a3a5c; box-shadow: 0 0 10px rgba(77,184,255,0.4); }
+  .btn-secondary { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.15); color: #fff; box-shadow: none; }
+
+  .status-indicator {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff4d4d;
+    margin-right: 5px;
+  }
+  .status-indicator.connected {
+    background: #4dff4d;
+    box-shadow: 0 0 8px #4dff4d;
+  }
+  .log-console {
+    grid-column: 1 / -1;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    padding: 15px;
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    color: #00ff00;
+    line-height: 1.5;
+  }
+  .log-entry { margin-bottom: 4px; }
+  .log-entry.error { color: #ff4d4d; }
+  .log-entry.success { color: #4dff4d; }
+  .log-entry.info { color: #4db8ff; }
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="seed-master-data.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>TPG Firebase Setup Portal</h1>
+  <div class="sub-title">Initialize, Seed Master Data, and Create System Users</div>
+
+  <div class="grid">
+
+    <!-- CARD 1: CONFIGURATION -->
+    <div class="card">
+      <div class="card-title">
+        <span>Firebase Configuration</span>
+        <span style="display:flex; align-items:center; font-size:11px; color:#fff">
+          <span id="conn-indicator" class="status-indicator"></span>
+          <span id="conn-text">Disconnected</span>
+        </span>
+      </div>
+      <div class="fg">
+        <label>API Key</label>
+        <input type="text" id="cfg-apiKey" value="AIzaSy...G6Fs">
+      </div>
+      <div class="fg">
+        <label>Auth Domain</label>
+        <input type="text" id="cfg-authDomain" value="factory-cedf6.firebaseapp.com">
+      </div>
+      <div class="fg">
+        <label>Project ID</label>
+        <input type="text" id="cfg-projectId" value="factory-cedf6">
+      </div>
+      <div class="fg">
+        <label>App ID</label>
+        <input type="text" id="cfg-appId" value="1:224732011574:web:45876ed1966901d2224c97">
+      </div>
+      <button class="btn" onclick="initFirebase()">Initialize & Connect</button>
+    </div>
+
+    <!-- RIGHT COLUMN: User Creator + Seed -->
+    <div style="display:flex; flex-direction:column; gap:20px">
+
+      <!-- CARD 2: USER CREATOR -->
+      <div class="card">
+        <div class="card-title">Create New User</div>
+
+        <!-- Preset name dropdown -->
+        <div class="fg">
+          <label>Preset Name (optional)</label>
+          <select id="usr-preset" onchange="onPresetSelect()">
+            <option value="">-- Type manually below --</option>
+            <option value="0">S. Kiat</option>
+            <option value="1">Varavuth Khampa</option>
+            <option value="2">Supachai</option>
+            <option value="3">MD</option>
+            <option value="4">Production Team</option>
+            <option value="5">Admin</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Employee Name</label>
+          <input type="text" id="usr-name" placeholder="e.g. S. Kiat / Varavuth Khampa">
+        </div>
+        <div class="fg">
+          <label>Email Address</label>
+          <input type="email" id="usr-email" placeholder="user@tpg.com">
+        </div>
+        <div class="fg">
+          <label>Password</label>
+          <input type="password" id="usr-pass" placeholder="At least 6 characters">
+        </div>
+        <div class="fg">
+          <label>System Role</label>
+          <select id="usr-role" onchange="applyRoleTemplate()">
+            <option value="sales">Sales / Initiator</option>
+            <option value="supervisor">Supervisor (Level 1 Approver)</option>
+            <option value="manager">Manager / MD (Level 2 Approver)</option>
+            <option value="production">Production</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Module Permissions</label>
+          <div class="perm-grid">
+            <div class="perm-header">
+              <span>Module</span><span>View</span><span>Approve</span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'saleContract')">
+              <span>Sale Contract</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="saleContract" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span><input type="checkbox" class="usr-perm-appr" data-key="approveSaleContract" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'saleOrder')">
+              <span>Sale Order</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="saleOrder" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span><input type="checkbox" class="usr-perm-appr" data-key="approveSaleOrder" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'shipmentTracking')">
+              <span>Shipment Tracking</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="shipmentTracking" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span class="no-checkbox">—</span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'rawMaterial')">
+              <span>Raw Material Plan</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="rawMaterial" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span class="no-checkbox">—</span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'orderSummary')">
+              <span>Order Summary</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="orderSummary" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span class="no-checkbox">—</span>
+            </div>
+            <div class="perm-row" onclick="togglePerm(this, 'production')">
+              <span>Production Queue</span>
+              <span><input type="checkbox" class="usr-perm-view" data-key="production" onclick="event.stopPropagation()" onchange="onPermClick(this)"></span>
+              <span class="no-checkbox">—</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn" onclick="createUser()">Create User & Assign Role</button>
+      </div>
+
+      <!-- CARD 3: DATA SEEDER -->
+      <div class="card">
+        <div class="card-title">Seed Master Data</div>
+        <div style="margin-bottom: 12px; font-size: 12px; color: #b0c4de; line-height: 1.4;">
+          This will populate Firestore master collections from TPG_SCSO_Workflow_v2026.xlsx.
+        </div>
+        <button class="btn btn-secondary" onclick="seedAllData()">Seed Excel Master Data</button>
+        <div style="margin:16px 0 10px;border-top:1px solid rgba(255,255,255,0.12)"></div>
+        <div style="margin-bottom: 12px; font-size: 12px; color: #ffb0b0; line-height: 1.4;">
+          Reset all Firestore business data except user profiles.
+        </div>
+        <button class="btn" style="border-color:#ff4d4d;color:#ffb0b0" onclick="resetAllDataExceptUsers()">Reset Data Except Users</button>
+      </div>
+
+    </div>
+
+    <!-- CONSOLE LOGS -->
+    <div class="log-console" id="log-console">
+      <div class="log-entry info">[System] Welcome to the TPG Setup Portal.</div>
+      <div class="log-entry info">[System] Paste your Firebase Configuration above to begin.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  var db = null;
+  var auth = null;
+  var isConnected = false;
+
+  // Preset users
+  var PRESET_USERS = [
+    { name: 'S. Kiat', role: 'sales', email: 'kiat@tpg.com', password: 'tpg1234' },
+    { name: 'Varavuth Khampa', role: 'sales', email: 'varavuth@tpg.com', password: 'tpg1234' },
+    { name: 'Supachai', role: 'supervisor', email: 'supachai@tpg.com', password: 'tpg1234' },
+    { name: 'MD', role: 'manager', email: 'md@tpg.com', password: 'tpg1234' },
+    { name: 'Production Team', role: 'production', email: 'production@tpg.com', password: 'tpg1234' },
+    { name: 'Admin', role: 'admin', email: 'admin@tpg.com', password: 'tpg1234' }
+  ];
+
+  // Role permission templates
+  var ROLE_PERMISSION_TEMPLATES = {
+    sales: { saleContract: true, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: false },
+    supervisor: { saleContract: true, saleOrder: true, shipmentTracking: false, rawMaterial: false, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false },
+    manager: { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: false },
+    production: { saleContract: false, saleOrder: false, shipmentTracking: false, rawMaterial: false, approveSaleOrder: false, orderSummary: false, approveSaleContract: false, production: true },
+    admin: { saleContract: true, saleOrder: true, shipmentTracking: true, rawMaterial: true, approveSaleOrder: true, orderSummary: true, approveSaleContract: true, production: true }
+  };
+
+  // Load saved config from localStorage
+  window.onload = function() {
+    var keys = ['apiKey', 'authDomain', 'projectId', 'appId'];
+    keys.forEach(function(k) {
+      var saved = localStorage.getItem('tpg_setup_' + k);
+      if (saved) document.getElementById('cfg-' + k).value = saved;
+    });
+    applyRoleTemplate();
+  };
+
+  function log(text, type) {
+    var con = document.getElementById('log-console');
+    var div = document.createElement('div');
+    div.className = 'log-entry ' + (type || 'info');
+    div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + text;
+    con.appendChild(div);
+    con.scrollTop = con.scrollHeight;
+  }
+
+  // ─── FIREBASE INIT ───
+  function initFirebase() {
+    var config = {
+      apiKey: document.getElementById('cfg-apiKey').value.trim(),
+      authDomain: document.getElementById('cfg-authDomain').value.trim(),
+      projectId: document.getElementById('cfg-projectId').value.trim(),
+      appId: document.getElementById('cfg-appId').value.trim()
+    };
+    if (!config.apiKey || !config.projectId) {
+      log('Error: API Key and Project ID required!', 'error');
+      return;
+    }
+    try {
+      for (var k in config) localStorage.setItem('tpg_setup_' + k, config[k]);
+      if (firebase.apps.length === 0) firebase.initializeApp(config);
+      db = firebase.firestore();
+      auth = firebase.auth();
+      isConnected = true;
+      document.getElementById('conn-indicator').className = 'status-indicator connected';
+      document.getElementById('conn-text').textContent = 'Connected';
+      document.getElementById('conn-text').style.color = '#4dff4d';
+      log('Connected to Firebase: ' + config.projectId, 'success');
+    } catch (e) {
+      log('Init failed: ' + e.message, 'error');
+    }
+  }
+
+  // ─── PRESET SELECT ───
+  function onPresetSelect() {
+    var idx = document.getElementById('usr-preset').value;
+    if (idx === '') return; // manual
+    var pu = PRESET_USERS[parseInt(idx)];
+    if (!pu) return;
+    document.getElementById('usr-name').value = pu.name;
+    document.getElementById('usr-email').value = pu.email;
+    document.getElementById('usr-pass').value = pu.password;
+    document.getElementById('usr-role').value = pu.role;
+    applyRoleTemplate();
+  }
+
+  // ─── ROLE TEMPLATE ───
+  function applyRoleTemplate() {
+    var roleEl = document.getElementById('usr-role');
+    if (!roleEl) return;
+    var template = ROLE_PERMISSION_TEMPLATES[roleEl.value] || ROLE_PERMISSION_TEMPLATES.sales;
+
+    // View checkboxes
+    document.querySelectorAll('.usr-perm-view').forEach(function(cb) {
+      cb.checked = !!template[cb.getAttribute('data-key')];
+    });
+    // Approve checkboxes
+    document.querySelectorAll('.usr-perm-appr').forEach(function(cb) {
+      cb.checked = !!template[cb.getAttribute('data-key')];
+    });
+  }
+
+  // Toggle: clicking the row toggles the View checkbox
+  function togglePerm(row, key) {
+    var cb = row.querySelector('.usr-perm-view');
+    if (cb) { cb.checked = !cb.checked; }
+  }
+
+  // When checkbox clicked directly, just do nothing extra
+  function onPermClick(cb) {
+    // handled by checkbox itself
+  }
+
+  function getSelectedPermissions() {
+    var permissions = {};
+    document.querySelectorAll('.usr-perm-view').forEach(function(cb) {
+      permissions[cb.getAttribute('data-key')] = cb.checked;
+    });
+    document.querySelectorAll('.usr-perm-appr').forEach(function(cb) {
+      permissions[cb.getAttribute('data-key')] = cb.checked;
+    });
+    return permissions;
+  }
+
+  // ─── CREATE USER ───
+  async function createUser() {
+    if (!isConnected) {
+      log('Please connect to Firebase first!', 'error');
+      return;
+    }
+    var name = document.getElementById('usr-name').value.trim();
+    var email = document.getElementById('usr-email').value.trim();
+    var pass = document.getElementById('usr-pass').value.trim();
+    var role = document.getElementById('usr-role').value;
+    var permissions = getSelectedPermissions();
+
+    if (!name) { log('Employee Name cannot be empty.', 'error'); return; }
+    if (!email || !pass) { log('Email and password cannot be empty.', 'error'); return; }
+    if (pass.length < 6) { log('Password must be at least 6 characters.', 'error'); return; }
+
+    log('Creating user: ' + email + '...', 'info');
+    try {
+      var cred = await auth.createUserWithEmailAndPassword(email, pass);
+      var user = cred.user;
+      log('Auth account created. UID: ' + user.uid, 'success');
+
+      await db.collection('users').doc(user.uid).set({
+        name: name,
+        email: email,
+        role: role,
+        permissions: permissions,
+        createdAt: new Date().toISOString()
+      });
+      log('Role "' + role + '" and permissions assigned to ' + email + '.', 'success');
+
+      // Clear form
+      document.getElementById('usr-name').value = '';
+      document.getElementById('usr-email').value = '';
+      document.getElementById('usr-pass').value = '';
+      document.getElementById('usr-preset').value = '';
+      document.getElementById('usr-role').value = 'sales';
+      applyRoleTemplate();
+
+      alert('User created!\n\nName: ' + name + '\nEmail: ' + email + '\nRole: ' + role);
+    } catch (e) {
+      if (e.code === 'auth/email-already-in-use') {
+        log('Email already exists. Try a different email or check Firebase Auth console.', 'error');
+      } else {
+        log('Failed: ' + e.message, 'error');
+      }
+    }
+  }
+
+  // ─── SEED / RESET ───
+  async function deleteCollection(col) {
+    var snap = await db.collection(col).get();
+    var docs = snap.docs;
+    for (var i = 0; i < docs.length; i += 400) {
+      var batch = db.batch();
+      docs.slice(i, i + 400).forEach(function(doc) { batch.delete(doc.ref); });
+      await batch.commit();
+    }
+  }
+
+  async function batchSetCollection(col, items) {
+    for (var i = 0; i < items.length; i += 400) {
+      var batch = db.batch();
+      items.slice(i, i + 400).forEach(function(item) {
+        batch.set(db.collection(col).doc(item.id), JSON.parse(JSON.stringify(item)));
+      });
+      await batch.commit();
+    }
+  }
+
+  async function seedAllData() {
+    if (!isConnected) { log('Please connect first!', 'error'); return; }
+    var seed = window.EXCEL_SEED_MASTER_DATA;
+    if (!seed) { log('seed-master-data.js not loaded!', 'error'); return; }
+
+    var ok = confirm(
+      'Seed Master Data?\n\n' +
+      'Buyers: ' + (seed.buyers || []).length + '\n' +
+      'Products: ' + (seed.products || []).length + '\n' +
+      'Categories: ' + (seed.categories || []).length + '\n' +
+      'Ports: ' + (seed.ports || []).length + '\n' +
+      'Pay Terms: ' + (seed.payTerms || []).length + '\n\n' +
+      'Contracts & Sale Orders will NOT be deleted.'
+    );
+    if (!ok) return;
+
+    log('Seeding master data...', 'info');
+    try {
+      var cols = ['buyers', 'products', 'ports', 'payTerms', 'categories'];
+      for (var c = 0; c < cols.length; c++) await deleteCollection(cols[c]);
+      await batchSetCollection('categories', seed.categories || []);
+      await batchSetCollection('buyers', seed.buyers || []);
+      await batchSetCollection('products', seed.products || []);
+      await batchSetCollection('ports', seed.ports || []);
+      await batchSetCollection('payTerms', seed.payTerms || []);
+      log('Master data seeded!', 'success');
+      alert('Done!');
+    } catch (e) { log('Failed: ' + e.message, 'error'); }
+  }
+
+  async function resetAllDataExceptUsers() {
+    if (!isConnected) { log('Please connect first!', 'error'); return; }
+    var colls = ['buyers', 'products', 'contracts', 'ports', 'payTerms', 'saleOrders', 'shipEntries', 'categories'];
+    var ok = confirm('Reset ALL data except Users?');
+    if (!ok) return;
+    var typed = prompt('Type RESET to confirm:');
+    if (typed !== 'RESET') { log('Cancelled.', 'info'); return; }
+
+    log('Resetting...', 'info');
+    try {
+      for (var i = 0; i < colls.length; i++) await deleteCollection(colls[i]);
+      log('Reset complete. Users preserved.', 'success');
+      alert('Done!');
+    } catch (e) { log('Failed: ' + e.message, 'error'); }
+  }
+</script>
+</body>
+</html>
